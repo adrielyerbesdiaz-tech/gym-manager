@@ -1,6 +1,6 @@
-import { asistencia } from "../../src/domain/entities/Asistencia";
-import { IGestorAsistencia } from "../../src/domain/interfaces/IGestorAsistencia";
-import { IServicioMembresia } from "../../src/domain/interfaces/IServicioMembresia";
+import { asistencia } from "../entities/Asistencia";
+import { IGestorAsistencia } from "../interfaces/IGestorAsistencia";
+import { IServicioMembresia } from "../interfaces/IServicioMembresia";
 
 export class ServicioAsistencia {
 

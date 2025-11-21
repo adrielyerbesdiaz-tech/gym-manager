@@ -1,0 +1,9 @@
+// src/domain/interfaces/IGestorAsistencia.ts
+import { asistencia } from "../entities/Asistencia"; // Recuerda usar PascalCase en el futuro: Asistencia
+
+export interface IGestorAsistencia {
+    guardar(asistencia: asistencia): void;
+    eliminar(idAsistencia: number): void;
+    obtenerPorId(idAsistencia: number): asistencia | null;
+    obtenerPorIdMembresia(idMembresia: number): asistencia[];
+}
