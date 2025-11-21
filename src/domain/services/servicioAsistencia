@@ -1,0 +1,46 @@
+import { asistencia } from "../../src/domain/entities/Asistencia";
+import { IGestorAsistencia } from "../../src/domain/interfaces/IGestorAsistencia";
+import { IServicioMembresia } from "../../src/domain/interfaces/IServicioMembresia";
+
+export class ServicioAsistencia {
+
+    constructor(
+        private readonly gestorAsistencia: IGestorAsistencia,
+        private readonly servicioMembresia: IServicioMembresia
+    ) {}
+
+    public registrarAsistencia(idCliente: number): void {
+        if (idCliente <= 0) {
+            throw new Error("El ID del cliente no es válido.");
+        }
+        const membresia = this.servicioMembresia.obtenerMembresiaActivaPorCliente(idCliente);
+
+        if (!membresia) {
+            throw new Error(`Acceso Denegado: El cliente ${idCliente} no tiene una membresía asignada.`);
+        }
+
+        if (!membresia.activa) {
+            throw new Error(`Acceso Denegado: La membresía del cliente ${idCliente} ha vencido o está inactiva.`);
+        }
+
+        const nuevaAsistencia = new asistencia(
+            membresia.id
+        );
+
+        this.gestorAsistencia.guardar(nuevaAsistencia);
+        console.log(`>> Check-in registrado: Cliente ${idCliente} | Membresía ${membresia.id} | ${nuevaAsistencia.fechaCheckIn}`);
+    }
+
+    public obtenerHistorialAsistencia(idCliente: number): asistencia[] {
+        if (idCliente <= 0) throw new Error("ID de cliente inválido.");
+
+        const membresia = this.servicioMembresia.obtenerMembresiaActivaPorCliente(idCliente);
+
+        if (!membresia) {
+
+            return []; 
+        }
+
+        return this.gestorAsistencia.obtenerPorIdMembresia(membresia.id);
+    }
+}

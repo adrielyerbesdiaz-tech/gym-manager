@@ -1,4 +1,4 @@
-export class usuario{
+export class Usuario{
     private readonly usuarioId: number;
     private nombreUsuario: string;
     private contrasenaHash: string;

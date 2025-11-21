@@ -1,4 +1,4 @@
-export class mantenimiento{
+export class Mantenimiento{
     public readonly mantenimientoId: number;
     public readonly tipoMantenimiento: string;
     public readonly fechaMantenimiento: Date;
