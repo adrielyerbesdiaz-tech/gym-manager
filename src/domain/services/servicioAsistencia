@@ -1,46 +1,43 @@
-import { asistencia } from "../entities/Asistencia";
-import { IGestorAsistencia } from "../interfaces/IGestorAsistencia";
-import { IServicioMembresia } from "../interfaces/IServicioMembresia";
+import { asistencia } from '../entities/asistencia';
+import { IGestorAsistencia } from '../interfaces/IGestorAsistencia';
+import { ServicioMembresia } from './ServicioMembresia';
 
 export class ServicioAsistencia {
+    private readonly gestorAsistencia: IGestorAsistencia;
+    private readonly servicioMembresia: ServicioMembresia;
 
     constructor(
-        private readonly gestorAsistencia: IGestorAsistencia,
-        private readonly servicioMembresia: IServicioMembresia
-    ) {}
-
-    public registrarAsistencia(idCliente: number): void {
-        if (idCliente <= 0) {
-            throw new Error("El ID del cliente no es válido.");
-        }
-        const membresia = this.servicioMembresia.obtenerMembresiaActivaPorCliente(idCliente);
-
-        if (!membresia) {
-            throw new Error(`Acceso Denegado: El cliente ${idCliente} no tiene una membresía asignada.`);
-        }
-
-        if (!membresia.activa) {
-            throw new Error(`Acceso Denegado: La membresía del cliente ${idCliente} ha vencido o está inactiva.`);
-        }
-
-        const nuevaAsistencia = new asistencia(
-            membresia.id
-        );
-
-        this.gestorAsistencia.guardar(nuevaAsistencia);
-        console.log(`>> Check-in registrado: Cliente ${idCliente} | Membresía ${membresia.id} | ${nuevaAsistencia.fechaCheckIn}`);
+        gestorAsistencia: IGestorAsistencia,
+        servicioMembresia: ServicioMembresia
+    ) {
+        this.gestorAsistencia = gestorAsistencia;
+        this.servicioMembresia = servicioMembresia;
     }
 
-    public obtenerHistorialAsistencia(idCliente: number): asistencia[] {
-        if (idCliente <= 0) throw new Error("ID de cliente inválido.");
-
-        const membresia = this.servicioMembresia.obtenerMembresiaActivaPorCliente(idCliente);
-
-        if (!membresia) {
-
-            return []; 
+    public registrarAsistencia(usuarioId: number): void {
+        const membresiaActiva = this.servicioMembresia.obtenerMembresiaActiva(usuarioId);
+        
+        if (!membresiaActiva) {
+            throw new Error('No se puede registrar asistencia: El cliente no tiene una membresía activa.');
         }
 
-        return this.gestorAsistencia.obtenerPorIdMembresia(membresia.id);
+        const nuevaAsistencia = new asistencia(membresiaActiva.getMembresiaId());
+        this.gestorAsistencia.guardar(nuevaAsistencia);
+    }
+
+    public obtenerHistorialAsistencia(usuarioId: number): asistencia[] {
+        if (usuarioId <= 0) {
+            return [];
+        }
+
+        const membresiasUsuario = this.servicioMembresia.obtenerMembresiasPorUsuario(usuarioId);
+        let historialCompleto: asistencia[] = [];
+
+        for (const membresia of membresiasUsuario) {
+            const asistenciasMembresia = this.gestorAsistencia.obtenerPorIdMembresia(membresia.getMembresiaId());
+            historialCompleto = historialCompleto.concat(asistenciasMembresia);
+        }
+
+        return historialCompleto;
     }
 }
