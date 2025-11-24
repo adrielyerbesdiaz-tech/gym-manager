@@ -1,28 +1,34 @@
-
-export class cliente{
-    private readonly Id: number;
+export class cliente {
+    private readonly clienteId: number;
     private readonly nombreCompleto: string;
-    private readonly telefono: number;
+    private readonly telefono: string; // Cambio: number -> string
     private notas: string;
     private readonly fechaRegistro: Date;
 
-    constructor(nombreCompleto: string, telefono: number, Id?: number, notas?: string){
-        this.Id = Id || -1;
+    constructor(
+        nombreCompleto: string, 
+        telefono: string, // El constructor ahora acepta string
+        notas: string = '', 
+        clienteId: number = 0, 
+        fechaRegistro?: Date
+    ) {
+        this.clienteId = clienteId;
         this.nombreCompleto = nombreCompleto;
         this.telefono = telefono;
-        this.notas = notas || '';
-        this.fechaRegistro = new Date();
+        this.notas = notas;
+        this.fechaRegistro = fechaRegistro || new Date();
     }
 
-    public getId(): number {
-        return this.Id;
+    public getClienteId(): number {
+        return this.clienteId;
     }
-    
+
     public getNombreCompleto(): string {    
         return this.nombreCompleto;
     }
 
-    public getTelefono(): number {
+    // Actualizamos el getter para que devuelva string
+    public getTelefono(): string {
         return this.telefono;
     }
 
@@ -37,5 +43,4 @@ export class cliente{
     public setNotas(notas: string): void {
         this.notas = notas;
     }
-
 }
