@@ -1,0 +1,79 @@
+import { equipamiento } from '../entities/equipamiento';
+import { equipoAccessorio } from '../entities/equipoAccesorio';
+
+export interface IGestorEquipo {
+    guardar(equipo: equipamiento): void;
+    actualizar(equipo: equipamiento): void;
+    eliminar(id: number): void;
+    obtenerPorId(id: number): equipamiento | null;
+}
+
+export interface IGestorAccesorioEquipo {
+    guardar(accesorio: equipoAccessorio): void;
+    actualizar(accesorio: equipoAccessorio): void;
+    obtenerPorId(id: number): equipoAccessorio | null;
+}
+
+export class ServicioEquipoGimnasio {
+    private readonly gestorEquipo: IGestorEquipo;
+    private readonly gestorAccesorio: IGestorAccesorioEquipo;
+
+    constructor(gestorEquipo: IGestorEquipo, gestorAccesorio: IGestorAccesorioEquipo) {
+        this.gestorEquipo = gestorEquipo;
+        this.gestorAccesorio = gestorAccesorio;
+    }
+
+    public agregarEquipoNuevo(nombre: string, tipo: string, imagenUrl: string = '', descripcion: string = ''): void {
+        if (!nombre || !tipo) {
+            throw new Error('El nombre y tipo del equipo son obligatorios.');
+        }
+
+        const nuevoEquipo = new equipamiento(nombre, tipo, imagenUrl, descripcion);
+        this.gestorEquipo.guardar(nuevoEquipo);
+    }
+
+    public actualizarDatosEquipo(id: number, nombre: string, tipo: string, descripcion: string): void {
+        const equipoExistente = this.gestorEquipo.obtenerPorId(id);
+
+        if (!equipoExistente) {
+            throw new Error('El equipo no existe.');
+        }
+
+        // Nota: Se asume recreación o métodos setter adicionales en entidad si se requieren cambios profundos
+        equipoExistente.setDescripcion(descripcion);
+        
+        this.gestorEquipo.actualizar(equipoExistente);
+    }
+
+    public moverEquipo(id: number, nuevaUbicacion: string): void {
+        const equipoExistente = this.gestorEquipo.obtenerPorId(id);
+
+        if (!equipoExistente) {
+            throw new Error('El equipo no existe.');
+        }
+
+        const descripcionActual = equipoExistente.getDescripcion() || '';
+        equipoExistente.setDescripcion(`${descripcionActual} [Ubicación: ${nuevaUbicacion}]`);
+        
+        this.gestorEquipo.actualizar(equipoExistente);
+    }
+
+    public agregarAccesorioAEquipo(nombre: string, cantidad: string, notas: string = ''): void {
+        if (!nombre) {
+            throw new Error('El nombre del accesorio es obligatorio.');
+        }
+
+        const nuevoAccesorio = new equipoAccessorio(nombre, cantidad, notas);
+        this.gestorAccesorio.guardar(nuevoAccesorio);
+    }
+
+    public reportarEquipoPerdido(id: number): void {
+        const equipoExistente = this.gestorEquipo.obtenerPorId(id);
+
+        if (!equipoExistente) {
+            throw new Error('El equipo no existe.');
+        }
+
+        this.gestorEquipo.eliminar(id);
+    }
+}
