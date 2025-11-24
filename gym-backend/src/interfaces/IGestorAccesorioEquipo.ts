@@ -1,7 +1,6 @@
 import { equipoAccessorio } from "../entities/equipoAccesorio";
+import { IBaseGestor } from "./IBaseGestor";
 
-export interface IGestorAccesorioEquipo {
-    guardar(accesorio: equipoAccessorio): void;
-    actualizar(accesorio: equipoAccessorio): void;
-    obtenerPorId(id: number): equipoAccessorio | null;
+export interface IGestorAccesorioEquipo extends IBaseGestor<equipoAccessorio> {
+    // Cuerpo vacío: hereda todo de IBaseGestor
 }

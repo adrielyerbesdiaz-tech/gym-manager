@@ -1,8 +1,6 @@
 import { equipamiento } from "../entities/equipamiento";
+import { IBaseGestor } from "./IBaseGestor";
 
-export interface IGestorEquipo {
-    guardar(equipo: equipamiento): void;
-    actualizar(equipo: equipamiento): void;
-    eliminar(id: number): void;
-    obtenerPorId(id: number): equipamiento | null;
+export interface IGestorEquipo extends IBaseGestor<equipamiento> {
+    // Aquí podrías añadir buscarPorTipo(tipo: string) en el futuro
 }

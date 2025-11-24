@@ -1,8 +1,6 @@
 import { mantenimiento } from "../entities/mantenimiento";
+import { IBaseGestor } from "./IBaseGestor";
 
-export interface IGestorMantenimiento {
-    guardar(mantenimiento: mantenimiento): void;
-    actualizar(mantenimiento: mantenimiento): void;
-    obtenerPorId(id: number): mantenimiento | null;
+export interface IGestorMantenimiento extends IBaseGestor<mantenimiento> {
     obtenerPorEquipoId(equipoId: number): mantenimiento[];
 }

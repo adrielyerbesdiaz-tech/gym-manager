@@ -1,8 +1,6 @@
 import { tipoMembresia } from "../entities/tipoMembresia";
+import { IBaseGestor } from "./IBaseGestor";
 
-export interface IGestorTipoMembresia {
-    obtenerPorId(id: number): tipoMembresia | null;
-    guardar(tipo: tipoMembresia): void;
-    actualizar(tipo: tipoMembresia): void;
-    obtenerTodos(): tipoMembresia[];
+export interface IGestorTipoMembresia extends IBaseGestor<tipoMembresia> {
+    // No necesita métodos extra por el momento
 }
