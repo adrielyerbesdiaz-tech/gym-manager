@@ -7,7 +7,7 @@ export class cliente{
     private readonly fechaRegistro: Date;
 
     constructor(nombreCompleto: string, telefono: number, notas?: string, Id?: number){
-        this.Id = Id || -1;
+        this.Id = Id || 0;
         this.nombreCompleto = nombreCompleto;
         this.telefono = telefono;
         this.notas = notas || '';

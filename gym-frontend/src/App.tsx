@@ -1,187 +1,296 @@
-import { useState, useEffect } from 'react';
-import { Dumbbell, UserCheck, Search } from 'lucide-react';
-import { buscarClientes } from './api/ClienteApi';
-import type { Cliente } from './api/ClienteApi';
+import { useState } from 'react';
+import AsistenciaPagina from './pages/asistencias/AsistenciaPagina';
+import ClientesPagina from './pages/clientes/ClientesPagina';
+import EquipamientoPagina from './pages/equipamiento/EquipamientoPagina';
+import ConfiguracionesPagina from './pages/configuraciones/ConfiguracionesPagina';
+import LoginPagina from './pages/login/LoginPagina';
+import { LogOut } from 'lucide-react';
+import type { IAsistencia } from './models/IAsistencia';
+import type { IMembresia } from './models/IMembresia';
+import type { ITipoMembresia } from './models/ITipoMembresia';
+import type { ICliente } from './models/ICliente';
+import type { IEquipamiento } from './models/IEquipamiento';
+import type { IEquipoAccesorio } from './models/IEquipoAccesorio';
+import type { IMantenimiento } from './models/IMantenimiento';
 
-export default function AsistenciaPagina() {
-    const [searchText, setSearchText] = useState('');
-    const [clientes, setClientes] = useState<Cliente[]>([]);
-    const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [paginaActual, setPaginaActual] = useState<'asistencias' | 'clientes' | 'equipamiento' | 'configuraciones'>('asistencias');
 
-    // Buscar clientes mientras el usuario escribe
-    useEffect(() => {
-        const buscar = async () => {
-            if (searchText.trim() === '') {
-                setClientes([]);
-                setShowDropdown(false);
-                return;
-            }
+  // Estado de contraseña (hardcoded para demo)
+  const [currentPassword, setCurrentPassword] = useState('admin123');
 
-            setIsLoading(true);
-            try {
-                const resultados = await buscarClientes(searchText);
-                setClientes(resultados);
-                setShowDropdown(resultados.length > 0);
-            } catch (error) {
-                console.error('Error:', error);
-                setClientes([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+  // Estado global para clientes
+  const [clientes, setClientes] = useState<ICliente[]>([
+    {
+      id: 1,
+      nombreCompleto: 'Juan Pérez',
+      telefono: '9999026122',
+      idTipoMembresia: 1,
+      fechaRegistro: '2024-01-15',
+      notas: 'Cliente regular, prefiere turno matutino'
+    },
+    {
+      id: 2,
+      nombreCompleto: 'María González',
+      telefono: '9991234567',
+      idTipoMembresia: 2,
+      fechaRegistro: '2024-02-20',
+      notas: 'Pago pendiente de mensualidad'
+    }
+  ]);
 
-        // Debounce: esperar 300ms después de que el usuario deje de escribir
-        const timer = setTimeout(buscar, 300);
-        return () => clearTimeout(timer);
-    }, [searchText]);
+  // Tipos de membresía (ahora editable)
+  const [tiposMembresia, setTiposMembresia] = useState<ITipoMembresia[]>([
+    { tipoMembresiaId: 1, nombre: 'Mensual', duracionDias: 30, precio: 500 },
+    { tipoMembresiaId: 2, nombre: 'Trimestral', duracionDias: 90, precio: 1350 },
+    { tipoMembresiaId: 3, nombre: 'Semestral', duracionDias: 180, precio: 2500 },
+    { tipoMembresiaId: 4, nombre: 'Anual', duracionDias: 365, precio: 4500 }
+  ]);
 
-    const handleSelectCliente = (cliente: Cliente) => {
-        setSelectedCliente(cliente);
-        setSearchText(cliente.nombreCompleto);
-        setShowDropdown(false);
+  // Membresías
+  const [membresias, setMembresias] = useState<IMembresia[]>([
+    {
+      membresiaId: 1,
+      tipoMembresiaId: 1,
+      clienteId: 1,
+      fechaInicio: '2024-11-01',
+      tipoMembresia: tiposMembresia[0],
+      cliente: clientes[0],
+      estado: 'Activa'
+    },
+    {
+      membresiaId: 2,
+      tipoMembresiaId: 2,
+      clienteId: 2,
+      fechaInicio: '2024-10-15',
+      tipoMembresia: tiposMembresia[1],
+      cliente: clientes[1],
+      estado: 'Vencida'
+    }
+  ]);
+
+  // Asistencias
+  const [asistencias, setAsistencias] = useState<IAsistencia[]>([
+    { asistenciaId: 1, membresiaId: 1, fechaCheckIn: '2024-11-20T08:30:00' },
+    { asistenciaId: 2, membresiaId: 1, fechaCheckIn: '2024-11-21T09:15:00' },
+    { asistenciaId: 3, membresiaId: 2, fechaCheckIn: '2024-11-22T10:00:00' }
+  ]);
+
+  // Equipamiento
+  const [equipamiento, setEquipamiento] = useState<IEquipamiento[]>([
+    {
+      equipoId: 1,
+      nombre: 'Barra Olímpica 20kg',
+      tipo: 'Pesas libres',
+      imagenUrl: '',
+      descripcion: 'Barra olímpica estándar de 20kg para levantamiento de pesas'
+    },
+    {
+      equipoId: 2,
+      nombre: 'Caminadora Profesional',
+      tipo: 'Cardio',
+      imagenUrl: '',
+      descripcion: 'Caminadora con velocidad variable y monitor de ritmo cardíaco'
+    }
+  ]);
+
+  // Accesorios
+  const [accesorios, setAccesorios] = useState<IEquipoAccesorio[]>([
+    {
+      accesorioId: 1,
+      nombre: 'Mancuernas 5kg',
+      cantidad: '10 pares',
+      notas: 'En buen estado'
+    },
+    {
+      accesorioId: 2,
+      nombre: 'Bandas de resistencia',
+      cantidad: '15 unidades',
+      notas: 'Diferentes niveles de resistencia'
+    }
+  ]);
+
+  // Mantenimientos
+  const [mantenimientos, setMantenimientos] = useState<IMantenimiento[]>([
+    {
+      mantenimientoId: 1,
+      equipoId: 1,
+      descripcion: 'Lubricación de rodamientos y ajuste general',
+      fechaInicio: '2024-11-01',
+      fechaFin: '2024-11-01',
+      costo: 150.00
+    },
+    {
+      mantenimientoId: 2,
+      equipoId: 2,
+      descripcion: 'Revisión de motor y calibración de sensores',
+      fechaInicio: '2024-11-15',
+      fechaFin: null,
+      costo: 300.00
+    }
+  ]);
+
+  const handleLogin = (username: string, password: string): boolean => {
+    // Validación hardcoded para demo
+    if (username === 'admin' && password === currentPassword) {
+      setIsAuthenticated(true);
+      setShowLogin(false);
+      setPaginaActual('clientes'); // Ir directamente a clientes después del login
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setPaginaActual('asistencias');
+  };
+
+  const handleLoginClick = () => {
+    setShowLogin(true);
+  };
+
+  const handleCancelLogin = () => {
+    setShowLogin(false);
+  };
+
+  // Handler para registrar asistencia
+  const handleRegisterAttendance = (clienteName: string) => {
+    // Buscar cliente por nombre
+    const cliente = clientes.find(c => c.nombreCompleto.toLowerCase() === clienteName.toLowerCase());
+    if (!cliente) return;
+
+    // Buscar membresía activa del cliente
+    const membresia = membresias.find(m => m.clienteId === cliente.id && m.estado === 'Activa');
+    if (!membresia) return;
+
+    // Crear nuevo registro de asistencia
+    const nuevaAsistencia: IAsistencia = {
+      asistenciaId: Date.now(),
+      membresiaId: membresia.membresiaId,
+      fechaCheckIn: new Date().toISOString()
     };
 
-    const handleClear = () => {
-        setSearchText('');
-        setSelectedCliente(null);
-        setClientes([]);
-        setShowDropdown(false);
-    };
+    setAsistencias([nuevaAsistencia, ...asistencias]);
+  };
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100 flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-                {/* Logo y Header */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-orange-600 rounded-full mb-4 shadow-lg shadow-red-500/30">
-                        <Dumbbell className="w-10 h-10 text-white" />
-                    </div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">NORK-YAM FITNESS GYM</h1>
-                    <p className="text-gray-600">Registro de Asistencia</p>
-                </div>
+  // Handler para cambiar contraseña
+  const handlePasswordChange = (oldPassword: string, newPassword: string): boolean => {
+    if (oldPassword === currentPassword) {
+      setCurrentPassword(newPassword);
+      return true;
+    }
+    return false;
+  };
 
-                {/* Card Principal */}
-                <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
-                    <div className="mb-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                            Bienvenido
-                        </h2>
-                        <p className="text-gray-600 text-sm">
-                            Busca tu nombre, teléfono o ID
-                        </p>
-                    </div>
 
-                    {/* Buscador con Autocomplete */}
-                    <div className="relative">
-                        <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
-                            ¿Quién eres?
-                        </label>
-                        
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-gray-400" />
-                            </div>
-                            
-                            <input
-                                type="text"
-                                id="search"
-                                value={searchText}
-                                onChange={(e) => {
-                                    setSearchText(e.target.value);
-                                    setSelectedCliente(null);
-                                }}
-                                placeholder="Buscar por nombre, teléfono o ID..."
-                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
-                            />
 
-                            {/* Indicador de carga */}
-                            {isLoading && (
-                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                                    <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-                                </div>
-                            )}
+  // Si está mostrando el login, renderizar LoginPagina
+  if (showLogin) {
+    return <LoginPagina onLogin={handleLogin} onCancel={handleCancelLogin} />;
+  }
 
-                            {/* Checkmark cuando se selecciona */}
-                            {selectedCliente && (
-                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                        <UserCheck className="w-5 h-5 text-white" />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+  return (
+    <div>
+      {/* Navigation Bar - Solo visible si está autenticado */}
+      {isAuthenticated && (
+        <nav className="bg-white shadow-md border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-8">
+                <button
+                  onClick={() => setPaginaActual('asistencias')}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'asistencias'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                >
+                  Asistencias
+                </button>
+                <button
+                  onClick={() => setPaginaActual('clientes')}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'clientes'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                >
+                  Clientes
+                </button>
+                <button
+                  onClick={() => setPaginaActual('equipamiento')}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'equipamiento'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                >
+                  Equipamiento
+                </button>
+                <button
+                  onClick={() => setPaginaActual('configuraciones')}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'configuraciones'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                >
+                  Configuraciones
+                </button>
+              </div>
 
-                        {/* Dropdown de resultados */}
-                        {showDropdown && !selectedCliente && (
-                            <div className="absolute w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl max-h-80 overflow-y-auto z-10">
-                                {clientes.map((cliente) => (
-                                    <div
-                                        key={cliente.Id}
-                                        onClick={() => handleSelectCliente(cliente)}
-                                        className="px-4 py-3 hover:bg-red-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
-                                    >
-                                        <div className="font-medium text-gray-900">
-                                            {cliente.nombreCompleto}
-                                        </div>
-                                        <div className="text-sm text-gray-500">
-                                            Tel: {cliente.telefono} • ID: {cliente.Id}
-                                        </div>
-                                        {cliente.notas && (
-                                            <div className="text-xs text-gray-400 mt-1">
-                                                {cliente.notas}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Información del cliente seleccionado */}
-                    {selectedCliente && (
-                        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <h3 className="font-semibold text-gray-900 mb-2">
-                                Cliente seleccionado:
-                            </h3>
-                            <p className="text-gray-700">
-                                <span className="font-medium">Nombre:</span> {selectedCliente.nombreCompleto}
-                            </p>
-                            <p className="text-gray-700">
-                                <span className="font-medium">Teléfono:</span> {selectedCliente.telefono}
-                            </p>
-                            <p className="text-gray-700">
-                                <span className="font-medium">ID:</span> {selectedCliente.Id}
-                            </p>
-                            
-                            <div className="mt-4 flex gap-2">
-                                <button
-                                    onClick={handleClear}
-                                    className="flex-1 bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition"
-                                >
-                                    Buscar otro
-                                </button>
-                                <button
-                                    disabled
-                                    className="flex-1 bg-gradient-to-r from-red-500 to-orange-600 text-white font-semibold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed"
-                                >
-                                    Registrar (Próximamente)
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Mensaje cuando no hay resultados */}
-                    {searchText.trim() && !isLoading && clientes.length === 0 && !selectedCliente && (
-                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <p className="text-yellow-800 text-sm">
-                                No se encontraron clientes con "{searchText}"
-                            </p>
-                        </div>
-                    )}
-                </div>
+              {/* Botón de logout */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors py-2 px-3 rounded-lg hover:bg-gray-50"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm font-medium">Cerrar Sesión</span>
+              </button>
             </div>
-        </div>
-    );
+          </div>
+        </nav>
+      )}
+
+      {/* Page Content */}
+      {isAuthenticated ? (
+        paginaActual === 'asistencias' ? (
+          <AsistenciaPagina
+            onLoginClick={handleLoginClick}
+            onRegisterAttendance={handleRegisterAttendance}
+          />
+        ) : paginaActual === 'clientes' ? (
+          <ClientesPagina
+            clientes={clientes}
+            setClientes={setClientes}
+            asistencias={asistencias}
+            membresias={membresias}
+            setMembresias={setMembresias}
+            tiposMembresia={tiposMembresia}
+          />
+        ) : paginaActual === 'equipamiento' ? (
+          <EquipamientoPagina
+            equipamiento={equipamiento}
+            setEquipamiento={setEquipamiento}
+            accesorios={accesorios}
+            setAccesorios={setAccesorios}
+            mantenimientos={mantenimientos}
+            setMantenimientos={setMantenimientos}
+          />
+        ) : (
+          <ConfiguracionesPagina
+            tiposMembresia={tiposMembresia}
+            setTiposMembresia={setTiposMembresia}
+            onPasswordChange={handlePasswordChange}
+          />
+        )
+      ) : (
+        <AsistenciaPagina
+          onLoginClick={handleLoginClick}
+          onRegisterAttendance={handleRegisterAttendance}
+        />
+      )}
+    </div>
+  );
 }
+
+export default App;

@@ -8,7 +8,8 @@ export interface Cliente {
   fechaRegistro: string;
 }
 
-// Buscar clientes por criterio (nombre, teléfono o ID)
+// ==================== CLIENTES ====================
+
 export const buscarClientes = async (criterio: string): Promise<Cliente[]> => {
   try {
     if (!criterio.trim()) {
@@ -28,5 +29,57 @@ export const buscarClientes = async (criterio: string): Promise<Cliente[]> => {
   } catch (error) {
     console.error('Error buscando clientes:', error);
     return [];
+  }
+};
+
+export const obtenerTodosClientes = async (): Promise<Cliente[]> => {
+  try {
+    const response = await fetch(`${API_URL}/clientes`);
+    
+    if (!response.ok) {
+      throw new Error('Error al obtener clientes');
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo clientes:', error);
+    return [];
+  }
+};
+
+// ==================== ASISTENCIAS ====================
+
+export const registrarAsistencia = async (clienteId: number) => {
+  try {
+    const response = await fetch(`${API_URL}/asistencias`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ clienteId }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al registrar asistencia');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error registrando asistencia:', error);
+    throw error;
+  }
+};
+
+export const verificarAsistenciaHoy = async (clienteId: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_URL}/asistencias/verificar/${clienteId}`);
+    const data = await response.json();
+    return data.yaRegistro;
+  } catch (error) {
+    console.error('Error verificando asistencia:', error);
+    return false;
   }
 };
