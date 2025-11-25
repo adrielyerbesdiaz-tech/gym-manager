@@ -1,57 +1,119 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Dumbbell, CheckCircle, UserCheck } from 'lucide-react';
 
-export default function GymLogin() {
-  const [searchValue, setSearchValue] = useState('');
+export default function AsistenciaPagina() {
+    const [memberId, setMemberId] = useState('');
+    const [isRegistered, setIsRegistered] = useState(false);
+    const [memberName, setMemberName] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleRegister = () => {
-    console.log('Registrar clicked');
-    // Aquí puedes agregar la lógica de registro
-  };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!memberId.trim()) return;
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(e.target.value);
-  };
+        setIsProcessing(true);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-5 bg-gradient-to-br from-purple-500 to-purple-800">
-      <div className="bg-white bg-opacity-95 p-12 rounded-3xl shadow-2xl max-w-md w-full text-center">
-        <div className="text-6xl mb-3">💪</div>
-        
-        <h1 className="text-gray-800 text-4xl font-bold mb-3">
-          ¡Bienvenido!
-        </h1>
-        
-        <p className="text-gray-600 mb-10 text-base">
-          Prepárate para entrenar
-        </p>
-        
-        <div className="relative mb-8">
-          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-xl">
-            🔍
-          </span>
-          <input
-            type="text"
-            value={searchValue}
-            onChange={handleSearch}
-            placeholder="Buscar..."
-            className="w-full py-4 px-5 pl-14 border-2 border-gray-200 rounded-full text-base outline-none transition-all duration-300 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-100"
-          />
+        // Simular registro de asistencia
+        setTimeout(() => {
+            setMemberName(memberId);
+            setIsRegistered(true);
+            setIsProcessing(false);
+
+            // Resetear después de 3 segundos
+            setTimeout(() => {
+                setIsRegistered(false);
+                setMemberId('');
+                setMemberName('');
+            }, 3000);
+        }, 800);
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100 flex items-center justify-center p-4">
+            <div className="w-full max-w-md">
+                {/* Logo y Header */}
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-orange-600 rounded-full mb-4 shadow-lg shadow-red-500/30">
+                        <Dumbbell className="w-10 h-10 text-white" />
+                    </div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">NORK-YAM FITNESS GYM</h1>
+                    <p className="text-gray-600">Registro de Asistencia</p>
+                </div>
+
+                {/* Card Principal */}
+                <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
+                    {!isRegistered ? (
+                        <>
+                            <div className="mb-6">
+                                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                                    Bienvenido
+                                </h2>
+                                <p className="text-gray-600 text-sm">
+                                    Ingrese su nombre para registrar su asistencia
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div>
+                                    <label htmlFor="memberId" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Nombre
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="memberId"
+                                        value={memberId}
+                                        onChange={(e) => setMemberId(e.target.value)}
+                                        placeholder="Ej: Juan Pérez"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
+                                        disabled={isProcessing}
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isProcessing || !memberId.trim()}
+                                    className="w-full bg-gradient-to-r from-red-500 to-orange-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-red-600 hover:to-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-red-500/30"
+                                >
+                                    {isProcessing ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            <span>Procesando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UserCheck className="w-5 h-5" />
+                                            <span>Registrar Asistencia</span>
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+                        </>
+                    ) : (
+                        <div className="text-center py-8">
+                            <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
+                                <CheckCircle className="w-12 h-12 text-green-600" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                                ¡Asistencia Registrada!
+                            </h3>
+                            <p className="text-gray-600 mb-1">
+                                Bienvenido, {memberName}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                {new Date().toLocaleString('es-MX', {
+                                    dateStyle: 'long',
+                                    timeStyle: 'short'
+                                })}
+                            </p>
+                            <div className="mt-6">
+                                <p className="text-green-600 font-semibold">
+                                    ¡Que tengas un excelente entrenamiento! 💪
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
-        
-        <button
-          onClick={handleRegister}
-          className="w-full py-4 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-full text-lg font-semibold cursor-pointer transition-all duration-300 shadow-lg shadow-purple-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-400 active:translate-y-0"
-        >
-          Registrar
-        </button>
-        
-        <p className="mt-6 text-gray-500 text-sm">
-          ¿Ya tienes cuenta?{' '}
-          <a href="#" className="text-purple-500 font-semibold no-underline hover:underline">
-            Inicia sesión
-          </a>
-        </p>
-      </div>
-    </div>
-  );
+    );
 }
