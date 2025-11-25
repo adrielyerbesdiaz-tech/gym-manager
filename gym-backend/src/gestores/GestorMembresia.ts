@@ -1,80 +1,50 @@
-import Database from 'better-sqlite3';
 import { membresia } from '../entidades/membresia';
+import { GestorBase } from './GestorBase';
 
-export class GestorMembresia {
-    private db: Database.Database;
-
-    constructor(db: Database.Database) {
-        this.db = db;
+export class GestorMembresia extends GestorBase<membresia> {
+    
+    protected getNombreTabla(): string {
+        return 'Membresias';
     }
 
-    // Helper para convertir fila de BD a objeto
-    private mapRowToMembresia(row: any): membresia {
-        // Creamos la instancia con los datos básicos
-        const nuevaMembresia = new membresia(
-            row.TipoMembresiaID,
-            row.UsuarioID
-        );
-        
-        // Asignamos las propiedades readonly (ID y fecha real de la BD)
-        (nuevaMembresia as any).membresiaId = row.ID;
-        (nuevaMembresia as any).fechaInicio = new Date(row.FechaInicio);
-        
-        return nuevaMembresia;
+    protected getColumnasInsert(): string[] {
+        return ['ID_Tipo', 'ID_Usuario', 'Fecha_Inicio'];
     }
 
-    public agregar(item: membresia): number {
-        const stmt = this.db.prepare(`
-            INSERT INTO Membresias (TipoMembresiaID, UsuarioID, FechaInicio)
-            VALUES (?, ?, ?)
-        `);
-
-        const result = stmt.run(
-            item.getTipoMembresiaID(),
-            item.getUsuarioID(),
-            item.getFechaInicio().toISOString()
-        );
-
-        return result.lastInsertRowid as number;
+    protected getValoresInsert(memb: membresia): any[] {
+        return [
+            memb.getTipoMembresiaID(),
+            memb.getUsuarioID(),
+            memb.getFechaInicio().toISOString()
+        ];
     }
 
-    public obtenerTodos(): membresia[] {
-        const stmt = this.db.prepare(`
-            SELECT * FROM Membresias ORDER BY FechaInicio DESC
-        `);
-        const rows = stmt.all() as any[];
-        return rows.map(row => this.mapRowToMembresia(row));
+    protected mapRowToEntity(row: any): membresia {
+        const memb = new membresia(row.ID_Tipo, row.ID_Usuario);
+        // Asignar ID y fecha desde la BD
+        (memb as any).membresiaId = row.ID;
+        (memb as any).fechaInicio = new Date(row.Fecha_Inicio);
+        return memb;
     }
 
-    public buscarPorId(id: number): membresia | null {
-        const stmt = this.db.prepare(`
-            SELECT * FROM Membresias WHERE ID = ?
-        `);
-        const row = stmt.get(id) as any;
-        
-        if (!row) return null;
-        return this.mapRowToMembresia(row);
-    }
-
+    // Métodos específicos
     public buscarPorUsuarioId(usuarioId: number): membresia[] {
         const stmt = this.db.prepare(`
-            SELECT * FROM Membresias 
-            WHERE UsuarioID = ? 
-            ORDER BY FechaInicio DESC
+            SELECT * FROM Membresias WHERE ID_Usuario = ?
+            ORDER BY Fecha_Inicio DESC
         `);
+
         const rows = stmt.all(usuarioId) as any[];
-        return rows.map(row => this.mapRowToMembresia(row));
+        return rows.map(row => this.mapRowToEntity(row));
     }
 
-    public eliminar(id: number): boolean {
+    public buscarPorTipoId(tipoId: number): membresia[] {
         const stmt = this.db.prepare(`
-            DELETE FROM Membresias WHERE ID = ?
+            SELECT * FROM Membresias WHERE ID_Tipo = ?
+            ORDER BY Fecha_Inicio DESC
         `);
-        const result = stmt.run(id);
-        return result.changes > 0;
+
+        const rows = stmt.all(tipoId) as any[];
+        return rows.map(row => this.mapRowToEntity(row));
     }
-    
-    // Verificar si un usuario ya tiene una membresía activa (opcional, útil para validaciones)
-    // Asume que la lógica de "activa" depende de fechas que se calcularían en el servicio
-    // o simplemente verifica existencia reciente.
 }

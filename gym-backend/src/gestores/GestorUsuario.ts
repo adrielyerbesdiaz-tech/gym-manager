@@ -1,88 +1,45 @@
-import Database from 'better-sqlite3';
 import { usuario } from '../entidades/usuario';
+import { GestorBase } from './GestorBase';
 
-export class GestorUsuario {
-    private db: Database.Database;
-
-    constructor(db: Database.Database) {
-        this.db = db;
+export class GestorUsuario extends GestorBase<usuario> {
+    
+    protected getNombreTabla(): string {
+        return 'Usuarios';
     }
 
-    // Helper para convertir fila de BD a objeto (necesario para asignar el ID privado)
-    private mapRowToUsuario(row: any): usuario {
-        // Creamos la instancia con nombre y hash
-        const user = new usuario(
-            row.NombreUsuario,
-            row.ContrasenaHash
-        );
-        
-        // Forzamos la asignación del ID ya que es readonly/privado en la clase original
+    protected getColumnasInsert(): string[] {
+        return ['Nombre_Usuario', 'Contrasena_Hash'];
+    }
+
+    protected getValoresInsert(user: usuario): any[] {
+        return [
+            user.getNombreUsuario(),
+            user.getContrasenaHash()
+        ];
+    }
+
+    protected mapRowToEntity(row: any): usuario {
+        const user = new usuario(row.Nombre_Usuario, row.Contrasena_Hash);
+        // Asignar ID desde la BD
         (user as any).usuarioId = row.ID;
         return user;
     }
 
-    public agregar(user: usuario): number {
-        const stmt = this.db.prepare(`
-            INSERT INTO Usuarios (NombreUsuario, ContrasenaHash)
-            VALUES (?, ?)
-        `);
-
-        const result = stmt.run(
-            user.getNombreUsuario(),
-            user.getContrasenaHash()
-        );
-
-        return result.lastInsertRowid as number;
-    }
-
-    public obtenerTodos(): usuario[] {
-        const stmt = this.db.prepare(`
-            SELECT * FROM Usuarios ORDER BY NombreUsuario
-        `);
-        const rows = stmt.all() as any[];
-        return rows.map(row => this.mapRowToUsuario(row));
-    }
-
-    public buscarPorId(id: number): usuario | null {
-        const stmt = this.db.prepare(`
-            SELECT * FROM Usuarios WHERE ID = ?
-        `);
-        const row = stmt.get(id) as any;
-        if (!row) return null;
-        return this.mapRowToUsuario(row);
-    }
-
+    // Métodos específicos
     public buscarPorNombreUsuario(nombreUsuario: string): usuario | null {
         const stmt = this.db.prepare(`
-            SELECT * FROM Usuarios WHERE NombreUsuario = ?
+            SELECT * FROM Usuarios WHERE Nombre_Usuario = ?
         `);
-        // Usamos .get() porque el nombre de usuario debe ser único
-        const row = stmt.get(nombreUsuario) as any; 
-        if (!row) return null;
-        return this.mapRowToUsuario(row);
+
+        const row = stmt.get(nombreUsuario) as any;
+        return row ? this.mapRowToEntity(row) : null;
     }
 
     public actualizarNombre(id: number, nombreUsuario: string): boolean {
-        const stmt = this.db.prepare(`
-            UPDATE Usuarios SET NombreUsuario = ? WHERE ID = ?
-        `);
-        const result = stmt.run(nombreUsuario, id);
-        return result.changes > 0;
+        return this.actualizarColumna(id, 'Nombre_Usuario', nombreUsuario);
     }
 
     public actualizarContrasenaHash(id: number, contrasenaHash: string): boolean {
-        const stmt = this.db.prepare(`
-            UPDATE Usuarios SET ContrasenaHash = ? WHERE ID = ?
-        `);
-        const result = stmt.run(contrasenaHash, id);
-        return result.changes > 0;
-    }
-
-    public eliminar(id: number): boolean {
-        const stmt = this.db.prepare(`
-            DELETE FROM Usuarios WHERE ID = ?
-        `);
-        const result = stmt.run(id);
-        return result.changes > 0;
+        return this.actualizarColumna(id, 'Contrasena_Hash', contrasenaHash);
     }
 }

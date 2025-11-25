@@ -1,67 +1,40 @@
-import Database from 'better-sqlite3';
 import { equipamiento } from '../entidades/equipamiento';
+import { GestorBase } from './GestorBase';
 
-export class GestorEquipamiento {
-    private db: Database.Database;
-
-    constructor(db: Database.Database) {
-        this.db = db;
+export class GestorEquipamiento extends GestorBase<equipamiento> {
+    
+    protected getNombreTabla(): string {
+        return 'Equipamiento';
     }
 
-    // Helper para convertir fila de BD a objeto (necesario para asignar el ID privado)
-    private mapRowToEquipamiento(row: any): equipamiento {
+    protected getColumnasInsert(): string[] {
+        return ['Nombre', 'Tipo', 'ImagenUrl', 'Descripcion'];
+    }
+
+    protected getValoresInsert(equipo: equipamiento): any[] {
+        return [
+            equipo.getNombre(),
+            equipo.getTipo(),
+            equipo.getImagenUrl(),
+            equipo.getDescripcion()
+        ];
+    }
+
+    protected mapRowToEntity(row: any): equipamiento {
         const equipo = new equipamiento(
             row.Nombre,
             row.Tipo,
             row.ImagenUrl,
             row.Descripcion
         );
-        // Forzamos la asignación del ID ya que es readonly/privado en la clase original
+        // Asignar el ID (readonly)
         (equipo as any).equipoId = row.ID;
         return equipo;
     }
 
-    public agregar(equipo: equipamiento): number {
-        const stmt = this.db.prepare(`
-            INSERT INTO Equipamiento (Nombre, Tipo, ImagenUrl, Descripcion)
-            VALUES (?, ?, ?, ?)
-        `);
-
-        const result = stmt.run(
-            equipo.getNombre(),
-            equipo.getTipo(),
-            equipo.getImagenUrl(),
-            equipo.getDescripcion()
-        );
-
-        return result.lastInsertRowid as number;
-    }
-
-    public obtenerTodos(): equipamiento[] {
-        const stmt = this.db.prepare(`
-            SELECT * FROM Equipamiento ORDER BY Nombre
-        `);
-        const rows = stmt.all() as any[];
-        return rows.map(row => this.mapRowToEquipamiento(row));
-    }
-
-    public buscarPorId(id: number): equipamiento | null {
-        const stmt = this.db.prepare(`
-            SELECT * FROM Equipamiento WHERE ID = ?
-        `);
-        const row = stmt.get(id) as any;
-        if (!row) return null;
-        return this.mapRowToEquipamiento(row);
-    }
-
+    // Métodos específicos de Equipamiento
     public buscarPorNombre(nombre: string): equipamiento[] {
-        const stmt = this.db.prepare(`
-            SELECT * FROM Equipamiento 
-            WHERE Nombre LIKE ? 
-            ORDER BY Nombre
-        `);
-        const rows = stmt.all(`%${nombre}%`) as any[];
-        return rows.map(row => this.mapRowToEquipamiento(row));
+        return this.buscarPorColumna('Nombre', nombre);
     }
 
     public buscarPorTipo(tipo: string): equipamiento[] {
@@ -69,7 +42,7 @@ export class GestorEquipamiento {
             SELECT * FROM Equipamiento WHERE Tipo = ?
         `);
         const rows = stmt.all(tipo) as any[];
-        return rows.map(row => this.mapRowToEquipamiento(row));
+        return rows.map(row => this.mapRowToEntity(row));
     }
 
     public actualizar(id: number, nombre: string, tipo: string, imagenUrl?: string, descripcion?: string): boolean {
@@ -79,14 +52,6 @@ export class GestorEquipamiento {
             WHERE ID = ?
         `);
         const result = stmt.run(nombre, tipo, imagenUrl, descripcion, id);
-        return result.changes > 0;
-    }
-
-    public eliminar(id: number): boolean {
-        const stmt = this.db.prepare(`
-            DELETE FROM Equipamiento WHERE ID = ?
-        `);
-        const result = stmt.run(id);
         return result.changes > 0;
     }
 }

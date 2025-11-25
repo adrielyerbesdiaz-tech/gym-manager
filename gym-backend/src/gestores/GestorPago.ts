@@ -1,75 +1,50 @@
-import Database from 'better-sqlite3';
 import { pago } from '../entidades/pago';
+import { GestorBase } from './GestorBase';
 
-export class GestorPago {
-    private db: Database.Database;
-
-    constructor(db: Database.Database) {
-        this.db = db;
+export class GestorPago extends GestorBase<pago> {
+    
+    protected getNombreTabla(): string {
+        return 'Pagos';
     }
 
-    /**
-     * Helper para convertir fila de BD a objeto, utilizando las propiedades de la tabla.
-     */
-    private mapRowToPago(row: any): pago {
-        // Usamos el constructor que acepta ID y Date para reconstruir el objeto
-        // con los valores exactos de la BD.
-        const payment = new pago(
-            row.membresia_Id,
-            row.monto,
-            row.ID, // pagoId
-            new Date(row.fechaPago) // fechaPago (reconstruye Date a partir del TEXT de la BD)
-        );
-        return payment;
+    protected getColumnasInsert(): string[] {
+        return ['ID_Membresia', 'Monto', 'Fecha_Pago'];
     }
 
-    public agregar(pago: pago): number {
-        const stmt = this.db.prepare(`
-            INSERT INTO pagos (membresia_Id, monto, fechaPago)
-            VALUES (?, ?, ?)
-        `);
-
-        const result = stmt.run(
+    protected getValoresInsert(pago: pago): any[] {
+        return [
             pago.getMembresiaID(),
             pago.getMonto(),
-            pago.getFechaPago().toISOString() // Guarda la fecha como texto ISO 8601
-        );
-
-        return result.lastInsertRowid as number;
+            pago.getFechaPago().toISOString()
+        ];
     }
 
-    public obtenerTodos(): pago[] {
-        const stmt = this.db.prepare(`
-            SELECT * FROM pagos ORDER BY fechaPago DESC
-        `);
-        const rows = stmt.all() as any[];
-        return rows.map(row => this.mapRowToPago(row));
+    protected mapRowToEntity(row: any): pago {
+        const p = new pago(row.ID_Membresia, row.Monto);
+        // Asignar ID y fecha desde la BD
+        (p as any).pagoId = row.ID;
+        (p as any).fechaPago = new Date(row.Fecha_Pago);
+        return p;
     }
 
-    public buscarPorId(id: number): pago | null {
-        const stmt = this.db.prepare(`
-            SELECT * FROM pagos WHERE ID = ?
-        `);
-        const row = stmt.get(id) as any;
-        if (!row) return null;
-        return this.mapRowToPago(row);
-    }
-
+    // Métodos específicos
     public buscarPorMembresiaId(membresiaId: number): pago[] {
         const stmt = this.db.prepare(`
-            SELECT * FROM pagos 
-            WHERE membresia_Id = ? 
-            ORDER BY fechaPago DESC
+            SELECT * FROM Pagos 
+            WHERE ID_Membresia = ?
+            ORDER BY Fecha_Pago DESC
         `);
+
         const rows = stmt.all(membresiaId) as any[];
-        return rows.map(row => this.mapRowToPago(row));
+        return rows.map(row => this.mapRowToEntity(row));
     }
-    
-    public eliminar(id: number): boolean {
+
+    public obtenerTotalPorMembresia(membresiaId: number): number {
         const stmt = this.db.prepare(`
-            DELETE FROM pagos WHERE ID = ?
+            SELECT SUM(Monto) as total FROM Pagos WHERE ID_Membresia = ?
         `);
-        const result = stmt.run(id);
-        return result.changes > 0;
+
+        const result = stmt.get(membresiaId) as any;
+        return result.total || 0;
     }
 }
