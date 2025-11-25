@@ -1,7 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Settings, Edit2, Trash2, X, Check, Plus, DollarSign, Calendar, FileText, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import type { ITipoMembresia } from '../../models/ITipoMembresia';
-import { ClienteApi } from '../../api/ClienteApi';
+import { TipoMembresiaApi } from '../../api/membresias/ApiTipoMembresia';
 
 interface ConfiguracionesPaginaProps {
     tiposMembresia: ITipoMembresia[];
@@ -21,7 +21,7 @@ export default function ConfiguracionesPagina({
     const recargarTiposMembresia = async () => {
         setLoading(true);
         try {
-            const data = await ClienteApi.obtenerTiposMembresia();
+            const data = await TipoMembresiaApi.obtenerTiposMembresia();
             setTiposMembresia(data);
         } catch (error) {
             console.error('Error al recargar tipos de membresía:', error);
@@ -36,13 +36,21 @@ export default function ConfiguracionesPagina({
     const [editingMembresia, setEditingMembresia] = useState<ITipoMembresia | null>(null);
     const [formDataMembresia, setFormDataMembresia] = useState<Omit<ITipoMembresia, 'tipoMembresiaId'>>({
         nombre: '',
-        duracionDias: 30,
+        duracionValor: 1,
+        duracionTipo: 'meses', 
+        duracionDias: 30,      
         precio: 0
     });
 
     const handleNuevaMembresia = () => {
         setEditingMembresia(null);
-        setFormDataMembresia({ nombre: '', duracionDias: 30, precio: 0 });
+        setFormDataMembresia({ 
+            nombre: '', 
+            duracionValor: 1, 
+            duracionTipo: 'meses', 
+            duracionDias: 30, 
+            precio: 0 
+        });
         setModalMembresiaOpen(true);
     };
 
@@ -50,6 +58,8 @@ export default function ConfiguracionesPagina({
         setEditingMembresia(membresia);
         setFormDataMembresia({
             nombre: membresia.nombre,
+            duracionValor: membresia.duracionValor,
+            duracionTipo: membresia.duracionTipo,
             duracionDias: membresia.duracionDias,
             precio: membresia.precio
         });
@@ -57,42 +67,42 @@ export default function ConfiguracionesPagina({
     };
 
     const handleGuardarMembresia = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
+    try {
+        if (editingMembresia) {
+            // ACTUALIZAR
+            await TipoMembresiaApi.actualizarTipoMembresia(editingMembresia.tipoMembresiaId, formDataMembresia);
+        } else {
+            // CREAR NUEVA
+            const { id } = await TipoMembresiaApi.crearTipoMembresia(formDataMembresia);
+            console.log(`Tipo de Membresía creado con ID: ${id}`);
+        }
+        // Recargar la lista desde el servidor después de la operación
+        await recargarTiposMembresia();
+        setModalMembresiaOpen(false);
+    } catch (error) {
+        alert(`Error al guardar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+    } finally {
+        setLoading(false);
+    }
+};
+
+const handleEliminarMembresia = async (id: number) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de membresía?')) {
+        setLoading(true);
         try {
-            if (editingMembresia) {
-                // ACTUALIZAR
-                await ClienteApi.actualizarTipoMembresia(editingMembresia.tipoMembresiaId, formDataMembresia);
-            } else {
-                // CREAR NUEVA
-                const { id } = await ClienteApi.crearTipoMembresia(formDataMembresia);
-                console.log(`Tipo de Membresía creado con ID: ${id}`);
-            }
-            // Recargar la lista después de la operación
+            await TipoMembresiaApi.eliminarTipoMembresia(id);
+            // Recargar desde el servidor en lugar de actualizar localmente
             await recargarTiposMembresia();
-            setModalMembresiaOpen(false);
         } catch (error) {
-            alert(`Error al guardar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            alert(`Error al eliminar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleEliminarMembresia = async (id: number) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de membresía?')) {
-            setLoading(true);
-            try {
-                await ClienteApi.eliminarTipoMembresia(id);
-                // Actualizar la lista localmente
-                setTiposMembresia(tiposMembresia.filter(tm => tm.tipoMembresiaId !== id));
-            } catch (error) {
-                alert(`Error al eliminar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
-            } finally {
-                setLoading(false);
-            }
-        }
-    };
+    }
+};
 
     // ==================== CAMBIO DE CONTRASEÑA ====================
     const [passwordData, setPasswordData] = useState({
@@ -144,15 +154,28 @@ export default function ConfiguracionesPagina({
         }
     };
 
+    const calcularDias = (valor: number, tipo: string): number => {
+        switch(tipo) {
+            case 'dias':
+                return valor;
+            case 'semanas':
+                return valor * 7;
+            case 'meses':
+                return valor * 30; // Aproximado
+            default:
+                return valor;
+        }
+    };
+
     return (
-        <div className="p-6">
-            {loading && (
-                 // Añadir un overlay de carga
-                 <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-                    <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
-                 </div>
-            )}
         <div className="min-h-screen bg-gray-50 p-6">
+            {loading && (
+                // Overlay de carga
+                <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+                    <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
+                </div>
+            )}
+            
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
@@ -472,25 +495,52 @@ export default function ConfiguracionesPagina({
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Duración (días)
-                                </label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="1"
-                                    value={formDataMembresia.duracionDias}
-                                    onChange={(e) => setFormDataMembresia({ ...formDataMembresia, duracionDias: Number(e.target.value) })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="30"
-                                />
-                                <p className="mt-1 text-xs text-gray-500">
-                                    Número de días de validez de la membresía
-                                </p>
-                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Duración (valor)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="1"
+                                        value={formDataMembresia.duracionValor}
+                                        onChange={(e) => setFormDataMembresia({ 
+                                            ...formDataMembresia, 
+                                            duracionValor: Number(e.target.value),
+                                            duracionDias: calcularDias(Number(e.target.value), formDataMembresia.duracionTipo)
+                                        })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="1"
+                                    />
+                                </div>
 
-                            <div className="flex gap-3 pt-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Tipo
+                                    </label>
+                                    <select
+                                        required
+                                        value={formDataMembresia.duracionTipo}
+                                        onChange={(e) => setFormDataMembresia({ 
+                                            ...formDataMembresia, 
+                                            duracionTipo: e.target.value,
+                                            duracionDias: calcularDias(formDataMembresia.duracionValor, e.target.value)
+                                        })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="dias">Días</option>
+                                        <option value="semanas">Semanas</option>
+                                        <option value="meses">Meses</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">
+                                Equivalente a {formDataMembresia.duracionDias} días
+                            </p>
+
+                            {/* Botones de acción */}
+                            <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
                                     onClick={() => setModalMembresiaOpen(false)}
@@ -500,17 +550,21 @@ export default function ConfiguracionesPagina({
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                    disabled={loading}
+                                    className="flex-1 bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
-                                    <Check className="w-5 h-5" />
-                                    Guardar
+                                    {loading ? 'Guardando...' : (
+                                        <>
+                                            <Check className="w-5 h-5" />
+                                            Guardar
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-        </div>
         </div>
     );
 }

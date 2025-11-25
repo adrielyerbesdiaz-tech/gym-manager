@@ -4,6 +4,7 @@ import type { ICliente } from '../../models/ICliente';
 import type { IAsistencia } from '../../models/IAsistencia';
 import type { IMembresia } from '../../models/IMembresia';
 import type { ITipoMembresia } from '../../models/ITipoMembresia';
+import type { IPago } from '../../models/IPago';
 
 interface ClientesPaginaProps {
     clientes: ICliente[];
@@ -12,118 +13,12 @@ interface ClientesPaginaProps {
     membresias: IMembresia[];
     setMembresias: Dispatch<SetStateAction<IMembresia[]>>;
     tiposMembresia: ITipoMembresia[];
+    pagos: IPago[];
+    setPagos: Dispatch<SetStateAction<IPago[]>>;
 }
 
-interface HistorialAsistenciasProps {
-    clienteId: number;
-    asistencias: IAsistencia[];
-}
-
-const HistorialAsistencias: React.FC<HistorialAsistenciasProps> = ({ clienteId, asistencias }) => {
-    // Filtrar por clienteId (de IAsistencia.ts)
-    const asistenciasCliente = asistencias
-        .filter(a => a.clienteId === clienteId)
-        .sort((a, b) => new Date(b.fechaCheckIn).getTime() - new Date(a.fechaCheckIn).getTime()); // Usa fechaCheckIn
-
-    return (
-        <div className="space-y-4">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Historial de Asistencias</h3>
-            {asistenciasCliente.length === 0 ? (
-                <p className="text-gray-500 bg-gray-50 p-3 rounded-md border">No hay asistencias registradas para este cliente.</p>
-            ) : (
-                <ul className="divide-y divide-gray-200 border rounded-lg max-h-96 overflow-y-auto">
-                    {asistenciasCliente.map((asistencia, index) => (
-                        <li key={asistencia.asistenciaId || index} className="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
-                            <span className="text-gray-900 font-medium">
-                                {new Date(asistencia.fechaCheckIn).toLocaleDateString()}
-                            </span>
-                            <span className="text-sm text-gray-600">
-                                {new Date(asistencia.fechaCheckIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
-};
-
-// ==================== 2. COMPONENTE AUXILIAR: HISTORIAL DE MEMBRESÍAS ====================
-
-interface HistorialMembresiasProps {
-    clienteId: number;
-    membresias: IMembresia[];
-    tiposMembresia: ITipoMembresia[];
-}
-
-const HistorialMembresias: React.FC<HistorialMembresiasProps> = ({ clienteId, membresias, tiposMembresia }) => {
-    // Filtrar por clienteId (de IMembresia.ts)
-    const membresiasCliente = membresias
-        .filter(m => m.clienteId === clienteId)
-        .sort((a, b) => new Date(b.fechaInicio).getTime() - new Date(a.fechaInicio).getTime());
-
-    return (
-        <div className="space-y-4">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Membresías Registradas</h3>
-            {membresiasCliente.length === 0 ? (
-                <p className="text-gray-500 bg-gray-50 p-3 rounded-md border">Este cliente no tiene membresías registradas.</p>
-            ) : (
-                <div className="space-y-3">
-                    {membresiasCliente.map(membresia => {
-                        // Buscar el tipo de membresía usando tipoMembresiaId (de IMembresia.ts)
-                        const tipo = tiposMembresia.find(t => t.tipoMembresiaId === membresia.tipoMembresiaId);
-                        
-                        // Cálculo de fecha de fin usando duracionValor y duracionTipo (de ITipoMembresia.ts)
-                        const fechaFin = new Date(membresia.fechaInicio);
-                        let estado = "Activa";
-                        
-                        if (tipo) {
-                            const { duracionValor, duracionTipo } = tipo;
-                            if (duracionTipo === 'dias') {
-                                fechaFin.setDate(fechaFin.getDate() + duracionValor);
-                            } else if (duracionTipo === 'meses') {
-                                fechaFin.setMonth(fechaFin.getMonth() + duracionValor);
-                            } else if (duracionTipo === 'anios') {
-                                fechaFin.setFullYear(fechaFin.getFullYear() + duracionValor);
-                            }
-                            
-                            if (fechaFin.getTime() < new Date().getTime()) {
-                                estado = "Vencida";
-                            }
-                        }
-
-                        return (
-                            <div key={membresia.membresiaId} className="border p-4 rounded-lg bg-white shadow-sm flex justify-between items-start">
-                                <div>
-                                    <p className="text-lg font-bold text-blue-600">{tipo ? tipo.nombre : 'Tipo Desconocido'}</p>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        <span className="font-semibold">ID Membresía:</span> {membresia.membresiaId}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-semibold">Inicio:</span> {new Date(membresia.fechaInicio).toLocaleDateString()}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-semibold">Vencimiento:</span> {fechaFin.toLocaleDateString()}
-                                    </p>
-                                </div>
-                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${estado === 'Activa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    {estado}
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-};
-
-export default function ClientesPagina({ clientes, setClientes, asistencias, membresias, setMembresias, tiposMembresia }: ClientesPaginaProps) {
+export default function ClientesPagina({ clientes, setClientes, asistencias, membresias, setMembresias, tiposMembresia, pagos, setPagos }: ClientesPaginaProps) {
     const [tabActual, setTabActual] = useState<'clientes' | 'historial' | 'membresias'>('clientes');
-    const [loading, setLoading] = useState(false);
-
-    const [selectedCliente, setSelectedCliente] = useState<ICliente | null>(null); 
-
 
     // Estados para Clientes
     const [modalOpen, setModalOpen] = useState(false);
@@ -147,23 +42,6 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
     const [membresiaARenovar, setMembresiaARenovar] = useState<IMembresia | null>(null);
     const [tipoMembresiaSeleccionada, setTipoMembresiaSeleccionada] = useState<number>(1);
 
-// FUNCIÓN PARA ABRIR EL MODAL DE DETALLE/EDICIÓN
-    const handleViewClientDetail = (cliente: ICliente) => {
-        setSelectedCliente(cliente);
-        setEditingClient(cliente); 
-        // setModalOpen(true); // Descomenta si usas un modal para la vista de detalle
-        setTabActual('clientes'); 
-    };
-    
-    // Función para cerrar el modal de detalle
-    const handleCloseModal = () => {
-        setSelectedCliente(null);
-        setEditingClient(null);
-        // setModalOpen(false); // Descomenta si usas un modal para la vista de detalle
-        setRenovarModalOpen(false);
-    };
-    
-
     // ==================== CLIENTES ====================
     const clientesFiltrados = clientes.filter(cliente =>
         cliente.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -172,7 +50,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
 
     const handleNuevoCliente = () => {
         setEditingClient(null);
-        setFormData({ nombreCompleto: '', telefono: '', idTipoMembresia: 1, notas: '' });
+        setFormData({ nombreCompleto: '', telefono: '', idTipoMembresia: tiposMembresia[0]?.tipoMembresiaId || 1, notas: '' });
         setModalOpen(true);
     };
 
@@ -191,18 +69,47 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
         e.preventDefault();
 
         if (editingClient) {
+            // Al editar, solo actualizar el cliente
             setClientes(clientes.map(c =>
                 c.id === editingClient.id
                     ? { ...formData, id: editingClient.id, fechaRegistro: editingClient.fechaRegistro }
                     : c
             ));
         } else {
+            // Al crear nuevo cliente, auto-crear membresía y pago
+            const clienteId = Date.now();
+            const membresiaId = clienteId + 1;
+            const pagoId = clienteId + 2;
+
             const nuevoCliente: ICliente = {
                 ...formData,
-                id: Date.now(),
+                id: clienteId,
                 fechaRegistro: new Date().toISOString().split('T')[0]
             };
+
+            // Crear membresía automáticamente
+            const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaId === formData.idTipoMembresia);
+            const nuevaMembresia: IMembresia = {
+                membresiaId: membresiaId,
+                tipoMembresiaId: formData.idTipoMembresia,
+                clienteId: clienteId,
+                fechaInicio: new Date().toISOString().split('T')[0],
+                tipoMembresia: tipoMembresia,
+                cliente: nuevoCliente,
+                estado: 'Activa'
+            };
+
+            // Crear pago inicial automáticamente
+            const nuevoPago: IPago = {
+                pagoId: pagoId,
+                membresiaId: membresiaId,
+                monto: tipoMembresia?.precio || 0,
+                fechaPago: new Date().toISOString().split('T')[0]
+            };
+
             setClientes([...clientes, nuevoCliente]);
+            setMembresias([...membresias, nuevaMembresia]);
+            setPagos([...pagos, nuevoPago]);
         }
         setModalOpen(false);
     };
@@ -288,187 +195,588 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
     };
 
     return (
-        <div className="p-6 bg-white rounded-lg shadow-md">
-            {/* Título y Controles */}
-            <h1 className="text-3xl font-bold text-gray-900 mb-6">Gestión de Clientes</h1>
-            <div className="flex justify-between items-center mb-6">
-                 {/* ... Controles de búsqueda y filtros ... */}
-                <button 
-                    onClick={() => setModalOpen(true)} // Abrir modal de creación
-                    className="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium"
-                >
-                    <UserPlus className="w-5 h-5" />
-                    Crear Nuevo Cliente
-                </button>
-            </div>
-            
-            {/* Tabla de Clientes */}
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registro</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {clientes.map((cliente) => (
-                            <tr key={cliente.id} className="hover:bg-gray-50 cursor-pointer">
-                                {/* Usando atributos de ICliente.ts: nombreCompleto, telefono, fechaRegistro */}
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{cliente.nombreCompleto}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{cliente.telefono}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {new Date(cliente.fechaRegistro).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); handleViewClientDetail(cliente); }}
-                                        className="text-indigo-600 hover:text-indigo-900 mr-3"
-                                        title="Ver Detalles"
-                                    >
-                                        <FileText className="w-5 h-5" />
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+        <div className="min-h-screen bg-gray-50 p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Clientes</h1>
+                    <p className="text-gray-600">Administra clientes, historial y membresías</p>
+                </div>
 
-            {/* Modal de Detalle/Historia/Membresías */}
-            {selectedCliente && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full z-50">
-                    <div className="relative top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-8 border w-3/4 max-w-4xl shadow-lg rounded-md bg-white">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">{selectedCliente.nombreCompleto}</h2>
-                        
-                        {/* Botones de Pestaña */}
-                        <div className="flex border-b border-gray-200">
+                {/* Tabs */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+                    <div className="border-b border-gray-200">
+                        <nav className="flex">
                             <button
                                 onClick={() => setTabActual('clientes')}
-                                className={`py-2 px-4 text-sm font-medium ${tabActual === 'clientes' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`py-4 px-6 font-medium text-sm transition-colors border-b-2 ${tabActual === 'clientes'
+                                    ? 'border-red-500 text-red-600'
+                                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                                    }`}
                             >
-                                Cliente
+                                <div className="flex items-center gap-2">
+                                    <User className="w-4 h-4" />
+                                    Clientes
+                                </div>
                             </button>
                             <button
                                 onClick={() => setTabActual('historial')}
-                                className={`py-2 px-4 text-sm font-medium ${tabActual === 'historial' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`py-4 px-6 font-medium text-sm transition-colors border-b-2 ${tabActual === 'historial'
+                                    ? 'border-red-500 text-red-600'
+                                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                                    }`}
                             >
-                                Historia <Clock className="w-4 h-4 inline ml-1" />
+                                <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    Historial
+                                </div>
                             </button>
                             <button
                                 onClick={() => setTabActual('membresias')}
-                                className={`py-2 px-4 text-sm font-medium ${tabActual === 'membresias' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`py-4 px-6 font-medium text-sm transition-colors border-b-2 ${tabActual === 'membresias'
+                                    ? 'border-red-500 text-red-600'
+                                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                                    }`}
                             >
-                                Membresías <CreditCard className="w-4 h-4 inline ml-1" />
+                                <div className="flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4" />
+                                    Membresías
+                                </div>
                             </button>
-                        </div>
+                        </nav>
+                    </div>
 
-                        <div className="mt-4 max-h-[60vh] overflow-y-auto p-2">
-                            {/* PESTAÑA CLIENTES (Información básica/Edición) */}
-                            {tabActual === 'clientes' && (
-                                <div className='space-y-4'>
-                                    {/* Usando atributos de ICliente.ts: id, telefono, fechaRegistro, notas */}
-                                    <p><span className='font-semibold'>ID:</span> {selectedCliente.id}</p>
-                                    <p><span className='font-semibold'>Teléfono:</span> {selectedCliente.telefono}</p>
-                                    <p><span className='font-semibold'>Registro:</span> {new Date(selectedCliente.fechaRegistro).toLocaleDateString()}</p>
-                                    <p><span className='font-semibold'>Notas:</span> {selectedCliente.notas || 'Sin notas'}</p>
-                                    <button 
-                                        onClick={() => { setRenovarModalOpen(true); setTipoMembresiaSeleccionada(null); }}
-                                        className='mt-4 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600'
+                    {/* Tab Content */}
+                    <div className="p-6">
+                        {/* TAB 1: CLIENTES */}
+                        {tabActual === 'clientes' && (
+                            <div className="space-y-6">
+                                {/* Barra de controles */}
+                                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                                    <div className="relative w-full sm:w-96">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar por nombre o teléfono..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                        />
+                                    </div>
+
+                                    <button
+                                        onClick={handleNuevoCliente}
+                                        className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-600 text-white font-medium py-2 px-6 rounded-lg hover:from-red-600 hover:to-orange-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-red-500/30"
                                     >
-                                        Renovar Membresía
+                                        <UserPlus className="w-5 h-5" />
+                                        Nuevo Cliente
                                     </button>
                                 </div>
-                            )}
 
-                            {/* PESTAÑA HISTORIAL (Asistencias) */}
-                            {tabActual === 'historial' && (
-                                <HistorialAsistencias
-                                    clienteId={selectedCliente.id}
-                                    asistencias={asistencias}
-                                />
-                            )}
+                                {/* Tabla de clientes */}
+                                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="w-4 h-4" /> Nombre
+                                                    </div>
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center gap-2">
+                                                        <Phone className="w-4 h-4" /> Teléfono
+                                                    </div>
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center gap-2">
+                                                        <CreditCard className="w-4 h-4" /> Membresía
+                                                    </div>
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center gap-2">
+                                                        <FileText className="w-4 h-4" /> Notas
+                                                    </div>
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar className="w-4 h-4" /> Registro
+                                                    </div>
+                                                </th>
+                                                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Acciones
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 bg-white">
+                                            {clientesFiltrados.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                                        <div className="flex flex-col items-center gap-2">
+                                                            <Search className="w-8 h-8 text-gray-300" />
+                                                            <p>No se encontraron clientes</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                clientesFiltrados.map((cliente) => {
+                                                    const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaId === cliente.idTipoMembresia);
+                                                    return (
+                                                        <tr key={cliente.id} className="hover:bg-gray-50 transition-colors group">
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div className="text-sm font-medium text-gray-900">
+                                                                    {cliente.nombreCompleto}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div className="text-sm text-gray-600 font-mono">
+                                                                    {cliente.telefono}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                                    {tipoMembresia?.nombre || 'N/A'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <div className="text-sm text-gray-600 max-w-xs truncate" title={cliente.notas}>
+                                                                    {cliente.notas || <span className="text-gray-400 italic">Sin notas</span>}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div className="text-sm text-gray-500">
+                                                                    {cliente.fechaRegistro}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                                <div className="flex justify-end gap-3">
+                                                                    <button
+                                                                        onClick={() => handleEditarCliente(cliente)}
+                                                                        className="text-blue-600 hover:text-blue-900 transition-colors p-1 rounded-md hover:bg-blue-50"
+                                                                        title="Editar"
+                                                                    >
+                                                                        <Edit2 className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleEliminarCliente(cliente.id)}
+                                                                        className="text-red-600 hover:text-red-900 transition-colors p-1 rounded-md hover:bg-red-50"
+                                                                        title="Eliminar"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                            {/* PESTAÑA MEMBRESÍAS */}
-                            {tabActual === 'membresias' && (
-                                <HistorialMembresias
-                                    clienteId={selectedCliente.id}
-                                    membresias={membresias}
-                                    tiposMembresia={tiposMembresia}
-                                />
-                            )}
-                        </div>
+                                {/* Footer */}
+                                <div className="text-sm text-gray-500 text-center">
+                                    Mostrando {clientesFiltrados.length} de {clientes.length} clientes
+                                </div>
+                            </div>
+                        )}
 
-                        {/* Botón de cerrar modal */}
-                        <button
-                            onClick={handleCloseModal}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
+                        {/* TAB 2: HISTORIAL */}
+                        {tabActual === 'historial' && (
+                            <div className="space-y-6">
+                                {/* Filtros */}
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Filter className="w-4 h-4 text-gray-600" />
+                                        <h3 className="font-medium text-gray-900">Filtros</h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Fecha Inicio
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={fechaInicio}
+                                                onChange={(e) => setFechaInicio(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Fecha Fin
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={fechaFin}
+                                                onChange={(e) => setFechaFin(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Nombre Cliente
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={nombreFiltro}
+                                                onChange={(e) => setNombreFiltro(e.target.value)}
+                                                placeholder="Buscar..."
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Estado Membresía
+                                            </label>
+                                            <select
+                                                value={estadoFiltro}
+                                                onChange={(e) => setEstadoFiltro(e.target.value as any)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="todos">Todos</option>
+                                                <option value="Activa">Activa</option>
+                                                <option value="Vencida">Vencida</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Tabla de historial */}
+                                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Fecha/Hora
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Cliente
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Tipo Membresía
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Estado
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 bg-white">
+                                            {asistenciasFiltradas.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                                        <div className="flex flex-col items-center gap-2">
+                                                            <Clock className="w-8 h-8 text-gray-300" />
+                                                            <p>No se encontraron registros de asistencia</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                asistenciasFiltradas.map((asistencia) => (
+                                                    <tr key={asistencia.asistenciaId} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-900">
+                                                                {new Date(asistencia.fechaCheckIn).toLocaleString('es-MX', {
+                                                                    dateStyle: 'short',
+                                                                    timeStyle: 'short'
+                                                                })}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {asistencia.cliente?.nombreCompleto || 'N/A'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-600">
+                                                                {asistencia.tipoMembresia?.nombre || 'N/A'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${asistencia.membresia?.estado === 'Activa'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-red-100 text-red-800'
+                                                                }`}>
+                                                                {asistencia.membresia?.estado || 'N/A'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="text-sm text-gray-500 text-center">
+                                    Mostrando {asistenciasFiltradas.length} de {asistencias.length} registros
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 3: MEMBRESIAS */}
+                        {tabActual === 'membresias' && (
+                            <div className="space-y-6">
+                                {/* Tabla de membresías */}
+                                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Cliente
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Tipo
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Inicio
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Vencimiento
+                                                </th>
+                                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Estado
+                                                </th>
+                                                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Acciones
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 bg-white">
+                                            {membresiasConDetalles.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                                        <div className="flex flex-col items-center gap-2">
+                                                            <CreditCard className="w-8 h-8 text-gray-300" />
+                                                            <p>No hay membresías registradas</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                membresiasConDetalles.map((membresia) => (
+                                                    <tr key={membresia.membresiaId} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {membresia.cliente?.nombreCompleto || 'N/A'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-600">
+                                                                {membresia.tipoMembresia?.nombre || 'N/A'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-600">
+                                                                {membresia.fechaInicio}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-600">
+                                                                {membresia.fechaVencimiento}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${membresia.estado === 'Activa'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-red-100 text-red-800'
+                                                                }`}>
+                                                                {membresia.estado}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                            <button
+                                                                onClick={() => handleRenovar(membresia)}
+                                                                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-900 transition-colors font-medium text-sm"
+                                                            >
+                                                                <RefreshCw className="w-4 h-4" />
+                                                                Renovar
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="text-sm text-gray-500 text-center">
+                                    Total de membresías: {membresias.length}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
 
-            {/* Modal de Renovar Membresía */}
-            {renovarModalOpen && selectedCliente && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full z-50">
-                    <div className="relative top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-8 border w-96 shadow-lg rounded-md bg-white">
-                        <h3 className="text-xl font-bold mb-4">Renovar Membresía para {selectedCliente.nombreCompleto}</h3>
-                        
-                        {/* El resto del JSX del modal de renovación... */}
-                        <p className="text-sm text-gray-500">Selecciona el nuevo tipo de membresía y el formulario de pago.</p>
-                        
-                        <div className="mt-4">
-                            <label htmlFor="tipoMembresia" className="block text-sm font-medium text-gray-700 mb-1">Tipo de Membresía</label>
-                            <select
-                                id="tipoMembresia"
-                                value={tipoMembresiaSeleccionada || ''}
-                                onChange={(e) => setTipoMembresiaSeleccionada(Number(e.target.value))}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            {/* Modal Nuevo/Editar Cliente */}
+            {modalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h2 className="text-xl font-bold text-gray-900">
+                                {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
+                            </h2>
+                            <button
+                                onClick={() => setModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full p-1 transition-colors"
                             >
-                                <option value="">Selecciona un tipo</option>
-                                {tiposMembresia.map(tipo => (
-                                    <option key={tipo.tipoMembresiaId} value={tipo.tipoMembresiaId}>
-                                        {tipo.nombre} (${tipo.precio})
-                                    </option>
-                                ))}
-                            </select>
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
-                        {/* ... otros campos del formulario ... */}
+                        <form onSubmit={handleGuardarCliente} className="p-6 space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Nombre Completo
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={formData.nombreCompleto}
+                                    onChange={(e) => setFormData({ ...formData, nombreCompleto: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Ej: Juan Pérez"
+                                />
+                            </div>
 
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                type="button"
-                                onClick={() => setRenovarModalOpen(false)}
-                                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={loading || tipoMembresiaSeleccionada === null}
-                                className="flex-1 bg-green-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {loading ? 'Procesando...' : (
-                                    <>
-                                        <RefreshCw className="w-5 h-5" />
-                                        Renovar
-                                    </>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Teléfono
+                                </label>
+                                <input
+                                    type="tel"
+                                    required
+                                    value={formData.telefono}
+                                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Ej: 9999026122"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tipo de Membresía
+                                </label>
+                                <select
+                                    required
+                                    value={formData.idTipoMembresia}
+                                    onChange={(e) => setFormData({ ...formData, idTipoMembresia: Number(e.target.value) })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    {tiposMembresia.map(tipo => (
+                                        <option key={tipo.tipoMembresiaId} value={tipo.tipoMembresiaId}>
+                                            {tipo.nombre} - ${tipo.precio} ({tipo.duracionDias} días)
+                                        </option>
+                                    ))}
+                                </select>
+                                {!editingClient && (
+                                    <p className="mt-1 text-xs text-green-600">
+                                        ✓ Se creará automáticamente la membresía y el pago inicial
+                                    </p>
                                 )}
-                            </button>
-                        </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Notas
+                                </label>
+                                <textarea
+                                    value={formData.notas}
+                                    onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-none"
+                                    placeholder="Información adicional..."
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setModalOpen(false)}
+                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Check className="w-5 h-5" />
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
-            
-            {/* Modal de Crear Cliente (Si usas modalOpen) */}
-            {/* {modalOpen && (
-                ...
-            )} */}
+
+            {/* Modal Renovar Membresía */}
+            {renovarModalOpen && membresiaARenovar && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h2 className="text-xl font-bold text-gray-900">
+                                Renovar Membresía
+                            </h2>
+                            <button
+                                onClick={() => setRenovarModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full p-1 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleGuardarRenovacion} className="p-6 space-y-5">
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                                <p className="text-sm text-gray-700">
+                                    <strong>Cliente:</strong> {clientes.find(c => c.id === membresiaARenovar.clienteId)?.nombreCompleto}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Tipo de Membresía
+                                </label>
+                                <select
+                                    value={tipoMembresiaSeleccionada}
+                                    onChange={(e) => setTipoMembresiaSeleccionada(Number(e.target.value))}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    {tiposMembresia.map(tipo => (
+                                        <option key={tipo.tipoMembresiaId} value={tipo.tipoMembresiaId}>
+                                            {tipo.nombre} - ${tipo.precio} ({tipo.duracionDias} días)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-sm text-gray-600 mb-1">Precio:</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    ${tiposMembresia.find(t => t.tipoMembresiaId === tipoMembresiaSeleccionada)?.precio}
+                                </p>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setRenovarModalOpen(false)}
+                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 bg-green-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <RefreshCw className="w-5 h-5" />
+                                    Renovar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

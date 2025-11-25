@@ -6,7 +6,6 @@ export interface IMembresia {
     tipoMembresiaId: number;
     clienteId: number;
     fechaInicio: string;
-     fechaVencimiento: string;
 
     // Propiedades opcionales para cuando el backend envía datos populados (JOINs)
     tipoMembresia?: ITipoMembresia;

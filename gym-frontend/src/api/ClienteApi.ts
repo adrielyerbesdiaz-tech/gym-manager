@@ -30,8 +30,9 @@ const transformClienteFromBackend = (cliente: any): any => ({
 const transformTipoMembresiaFromBackend = (tipo: any): any => ({
   tipoMembresiaId: tipo.tipoMembresiaID || tipo.ID,
   nombre: tipo.nombre,
-  duracionDias: tipo.duracionValor, // Ahora usas duracionValor
-  duracionTipo: tipo.duracionTipo,  // Añadir duracionTipo
+  duracionValor: tipo.duracionValor || tipo.Duracion_Valor, 
+  duracionTipo: tipo.duracionTipo || tipo.Duracion_Tipo,     
+  duracionDias: tipo.duracionDias || tipo.duracionValor || tipo.Duracion_Valor,   
   precio: tipo.precio
 });
 
@@ -152,49 +153,6 @@ export class ClienteApi {
     await handleResponse(response);
   }
 
-  // ==================== TIPOS DE MEMBRESÍA ====================
-  
-  static async obtenerTiposMembresia(): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/tipos-membresia`);
-    const data = await handleResponse(response);
-    return data.map(transformTipoMembresiaFromBackend);
-  }
-
-  static async crearTipoMembresia(tipoMembresiaData: any): Promise<{ id: number }> {
-    const response = await fetch(`${API_BASE_URL}/tipos-membresia`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre: tipoMembresiaData.nombre,
-        duracionValor: tipoMembresiaData.duracionValor,
-        duracionTipo: tipoMembresiaData.duracionTipo,
-        precio: tipoMembresiaData.precio
-      })
-    });
-    return handleResponse(response);
-  }
-
-  static async actualizarTipoMembresia(id: number, tipoMembresiaData: any): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/tipos-membresia/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre: tipoMembresiaData.nombre,
-        duracionValor: tipoMembresiaData.duracionValor,
-        duracionTipo: tipoMembresiaData.duracionTipo,
-        precio: tipoMembresiaData.precio
-      })
-    });
-    await handleResponse(response);
-  }
-
-  static async eliminarTipoMembresia(id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/tipos-membresia/${id}`, {
-      method: 'DELETE'
-    });
-    await handleResponse(response);
-  }
-
   // ==================== ASISTENCIAS ====================
 
   static async registrarAsistencia(clienteId: number): Promise<any> {
@@ -234,40 +192,46 @@ static async obtenerTodasLasAsistencias(): Promise<any[]> {
     return handleResponse(response);
   }
 
-  // ==================== MEMBRESÍAS ====================
-
-static async obtenerTodasLasMembresias(): Promise<any[]> {
-  const response = await fetch(`${API_BASE_URL}/membresias`); // Asumo que tienes un endpoint /membresias
-  const data = await handleResponse(response);
-  // Aplicar transformación a cada elemento
-  return data.map(transformMembresiaFromBackend);
+  // ==================== TIPOS DE MEMBRESIAS ====================
+static async crearTipoMembresia(tipoMembresiaData: any): Promise<{ id: number }> {
+    const response = await fetch(`${API_BASE_URL}/tipos-membresia`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            nombre: tipoMembresiaData.nombre,
+            duracionValor: tipoMembresiaData.duracionValor,
+            duracionTipo: tipoMembresiaData.duracionTipo,
+            precio: tipoMembresiaData.precio
+        })
+    });
+    return handleResponse(response);
 }
 
-  // ==================== PAGOS ====================
-
-  static async registrarPago(membresiaID: number, monto: number): Promise<{ id: number }> {
-    const response = await fetch(`${API_BASE_URL}/pagos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ membresiaID, monto })
-    });
-    return handleResponse(response);
-  }
-
-  static async obtenerTodosLosPagos(): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/pagos`);
-    return handleResponse(response);
-  }
-
-  static async obtenerPagosPorMembresia(membresiaId: number): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/pagos/membresia/${membresiaId}`);
-    return handleResponse(response);
-  }
-
-  static async eliminarPago(id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/pagos/${id}`, {
-      method: 'DELETE'
+static async actualizarTipoMembresia(id: number, tipoMembresiaData: any): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/tipos-membresia/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            nombre: tipoMembresiaData.nombre,
+            duracionValor: tipoMembresiaData.duracionValor,
+            duracionTipo: tipoMembresiaData.duracionTipo,
+            precio: tipoMembresiaData.precio
+        })
     });
     await handleResponse(response);
-  }
+}
+
+static async obtenerTiposMembresia(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/tipos-membresia`);
+    const data = await handleResponse(response);
+    return data.map(transformTipoMembresiaFromBackend);
+}
+
+static async eliminarTipoMembresia(id: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/tipos-membresia/${id}`, {
+        method: 'DELETE'
+    });
+    await handleResponse(response);
+}
+
 }
