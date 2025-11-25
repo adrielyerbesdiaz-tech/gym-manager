@@ -11,7 +11,7 @@ export class GestorTipoMembresia {
   // Agregar un nuevo tipo de membresía
   public agregar(tipo: tipoMembresia): number {
     const stmt = this.db.prepare(`
-      INSERT INTO Tipos_Membresia (Nombre, Duracion_Valor, Duracion_Tipo, Precio)
+      INSERT INTO Tipos_Membresias (Nombre, Duracion_Valor, Duracion_Tipo, Precio)
       VALUES (?, ?, ?, ?)
     `);
 
@@ -28,7 +28,7 @@ export class GestorTipoMembresia {
   // Buscar tipo de membresía por ID
   public buscarPorId(id: number): tipoMembresia | null {
     const stmt = this.db.prepare(`
-      SELECT * FROM Tipos_Membresia WHERE ID = ?
+      SELECT * FROM Tipos_Membresias WHERE ID = ?
     `);
 
     const row = stmt.get(id) as any;
@@ -49,7 +49,7 @@ export class GestorTipoMembresia {
   // Buscar tipos de membresía por nombre
   public buscarPorNombre(nombre: string): tipoMembresia[] {
     const stmt = this.db.prepare(`
-      SELECT * FROM Tipos_Membresia 
+      SELECT * FROM Tipos_Membresias 
       WHERE Nombre LIKE ?
       ORDER BY Nombre
     `);
@@ -68,7 +68,7 @@ export class GestorTipoMembresia {
   // Obtener todos los tipos de membresía
   public obtenerTodos(): tipoMembresia[] {
     const stmt = this.db.prepare(`
-      SELECT * FROM Tipos_Membresia ORDER BY Nombre
+      SELECT * FROM Tipos_Membresias ORDER BY Nombre
     `);
 
     const rows = stmt.all() as any[];
@@ -85,7 +85,7 @@ export class GestorTipoMembresia {
   // Actualizar tipo de membresía
   public actualizar(tipo: tipoMembresia): boolean {
     const stmt = this.db.prepare(`
-      UPDATE Tipos_Membresia 
+      UPDATE Tipos_Membresias 
       SET Nombre = ?, Duracion_Valor = ?, Duracion_Tipo = ?, Precio = ?
       WHERE ID = ?
     `);
@@ -104,7 +104,7 @@ export class GestorTipoMembresia {
   // Actualizar solo el precio
   public actualizarPrecio(id: number, precio: number): boolean {
     const stmt = this.db.prepare(`
-      UPDATE Tipos_Membresia SET Precio = ? WHERE ID = ?
+      UPDATE Tipos_Membresias SET Precio = ? WHERE ID = ?
     `);
 
     const result = stmt.run(precio, id);
@@ -115,7 +115,7 @@ export class GestorTipoMembresia {
   // Actualizar solo el nombre
   public actualizarNombre(id: number, nombre: string): boolean {
     const stmt = this.db.prepare(`
-      UPDATE Tipos_Membresia SET Nombre = ? WHERE ID = ?
+      UPDATE Tipos_Membresias SET Nombre = ? WHERE ID = ?
     `);
 
     const result = stmt.run(nombre, id);
@@ -126,7 +126,7 @@ export class GestorTipoMembresia {
   // Actualizar solo la duración
   public actualizarDuracion(id: number, duracionValor: number, duracionTipo: string): boolean {
     const stmt = this.db.prepare(`
-      UPDATE Tipos_Membresia SET Duracion_Valor = ?, Duracion_Tipo = ? WHERE ID = ?
+      UPDATE Tipos_Membresias SET Duracion_Valor = ?, Duracion_Tipo = ? WHERE ID = ?
     `);
 
     const result = stmt.run(duracionValor, duracionTipo, id);
@@ -137,7 +137,7 @@ export class GestorTipoMembresia {
   // Eliminar tipo de membresía
   public eliminar(id: number): boolean {
     const stmt = this.db.prepare(`
-      DELETE FROM Tipos_Membresia WHERE ID = ?
+      DELETE FROM Tipos_Membresias WHERE ID = ?
     `);
 
     const result = stmt.run(id);
@@ -148,7 +148,7 @@ export class GestorTipoMembresia {
   // Verificar si existe un tipo de membresía
   public existe(id: number): boolean {
     const stmt = this.db.prepare(`
-      SELECT COUNT(*) as count FROM Tipos_Membresia WHERE ID = ?
+      SELECT COUNT(*) as count FROM Tipos_Membresias WHERE ID = ?
     `);
 
     const result = stmt.get(id) as any;
@@ -171,7 +171,7 @@ export class GestorTipoMembresia {
   public obtenerPorPrecio(ascendente: boolean = true): tipoMembresia[] {
     const orden = ascendente ? 'ASC' : 'DESC';
     const stmt = this.db.prepare(`
-      SELECT * FROM Tipos_Membresia ORDER BY Precio ${orden}
+      SELECT * FROM Tipos_Membresias ORDER BY Precio ${orden}
     `);
 
     const rows = stmt.all() as any[];
@@ -188,7 +188,7 @@ export class GestorTipoMembresia {
   // Obtener tipos por tipo de duración (dias, semanas, meses)
   public obtenerPorTipoDuracion(duracionTipo: string): tipoMembresia[] {
     const stmt = this.db.prepare(`
-      SELECT * FROM Tipos_Membresia 
+      SELECT * FROM Tipos_Membresias 
       WHERE Duracion_Tipo = ?
       ORDER BY Duracion_Valor
     `);

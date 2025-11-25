@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Dumbbell, CheckCircle, UserCheck, LogIn } from 'lucide-react';
+import { ClienteApi } from '../../api/ClienteApi';
 
 interface AsistenciaPaginaProps {
     onLoginClick?: () => void;
-    onRegisterAttendance?: (clienteName: string) => void;
+    onRegisterAttendance?: (clienteId: number, clienteName: string) => Promise<boolean>;
 }
 
 export default function AsistenciaPagina({ onLoginClick, onRegisterAttendance }: AsistenciaPaginaProps = {}) {
@@ -11,32 +12,61 @@ export default function AsistenciaPagina({ onLoginClick, onRegisterAttendance }:
     const [isRegistered, setIsRegistered] = useState(false);
     const [memberName, setMemberName] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!memberId.trim()) return;
+    const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!memberId.trim()) return;
 
-        setIsProcessing(true);
+    setIsProcessing(true);
+    setError('');
+    
+    try {
+        // 1. Buscar cliente por teléfono exacto
+        const cliente = await ClienteApi.buscarClientePorTelefono(memberId.trim());
+        
+        if (!cliente) {
+            throw new Error('Cliente no encontrado. Verifique el teléfono.');
+        }
 
-        // Simular registro de asistencia
-        setTimeout(() => {
-            setMemberName(memberId);
+        // 2. Verificar si ya registró asistencia hoy
+        const yaRegistro = await ClienteApi.verificarAsistenciaHoy(cliente.id);
+        
+        if (yaRegistro) {
+            throw new Error(`${cliente.nombreCompleto} ya registró su asistencia hoy.`);
+        }
+
+        // 3. Registrar asistencia (usando la función de App.tsx si está disponible)
+        let registroExitoso = false;
+        
+        if (onRegisterAttendance) {
+            registroExitoso = await onRegisterAttendance(cliente.id, cliente.nombreCompleto);
+        } else {
+            // Fallback: registrar directamente
+            await ClienteApi.registrarAsistencia(cliente.id);
+            registroExitoso = true;
+        }
+
+        if (registroExitoso) {
+            // 4. Mostrar éxito
+            setMemberName(cliente.nombreCompleto);
             setIsRegistered(true);
-            setIsProcessing(false);
 
-            // Llamar al callback para registrar en el backend/estado global
-            if (onRegisterAttendance) {
-                onRegisterAttendance(memberId);
-            }
-
-            // Resetear después de 3 segundos
+            // 5. Resetear después de 3 segundos
             setTimeout(() => {
                 setIsRegistered(false);
                 setMemberId('');
                 setMemberName('');
             }, 3000);
-        }, 800);
-    };
+        }
+
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error al registrar asistencia.';
+        setError(errorMessage);
+    } finally {
+        setIsProcessing(false);
+    }
+};
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100 flex items-center justify-center p-4">
@@ -55,25 +85,32 @@ export default function AsistenciaPagina({ onLoginClick, onRegisterAttendance }:
                     {!isRegistered ? (
                         <>
                             <div className="mb-6">
-                                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                                <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center justify-center gap-2">
+                                    <UserCheck className="w-5 h-5 text-red-500" />
                                     Bienvenido
                                 </h2>
-                                <p className="text-gray-600 text-sm">
-                                    Ingrese su nombre para registrar su asistencia
+                                <p className="text-gray-600 text-sm text-center">
+                                    Ingrese su teléfono para registrar su asistencia
                                 </p>
                             </div>
+
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
+                                    {error}
+                                </div>
+                            )}
 
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div>
                                     <label htmlFor="memberId" className="block text-sm font-medium text-gray-700 mb-2">
-                                        Nombre
+                                        Teléfono
                                     </label>
                                     <input
                                         type="text"
                                         id="memberId"
                                         value={memberId}
                                         onChange={(e) => setMemberId(e.target.value)}
-                                        placeholder="Ej: Juan Pérez"
+                                        placeholder="Ej: 1234567890"
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
                                         disabled={isProcessing}
                                     />

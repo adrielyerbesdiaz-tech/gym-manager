@@ -1,6 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { Settings, Edit2, Trash2, X, Check, Plus, DollarSign, Calendar, FileText, Lock, Eye, EyeOff } from 'lucide-react';
+import { Settings, Edit2, Trash2, X, Check, Plus, DollarSign, Calendar, FileText, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import type { ITipoMembresia } from '../../models/ITipoMembresia';
+import { ClienteApi } from '../../api/ClienteApi';
 
 interface ConfiguracionesPaginaProps {
     tiposMembresia: ITipoMembresia[];
@@ -14,6 +15,21 @@ export default function ConfiguracionesPagina({
     onPasswordChange
 }: ConfiguracionesPaginaProps) {
     const [tabActual, setTabActual] = useState<'membresias' | 'password'>('membresias');
+    const [loading, setLoading] = useState(false);
+
+    // Función para recargar la lista de Tipos de Membresía
+    const recargarTiposMembresia = async () => {
+        setLoading(true);
+        try {
+            const data = await ClienteApi.obtenerTiposMembresia();
+            setTiposMembresia(data);
+        } catch (error) {
+            console.error('Error al recargar tipos de membresía:', error);
+            alert(`Error al cargar tipos de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     // ==================== GESTIÓN DE MEMBRESÍAS ====================
     const [modalMembresiaOpen, setModalMembresiaOpen] = useState(false);
@@ -40,28 +56,41 @@ export default function ConfiguracionesPagina({
         setModalMembresiaOpen(true);
     };
 
-    const handleGuardarMembresia = (e: React.FormEvent) => {
+    const handleGuardarMembresia = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
 
-        if (editingMembresia) {
-            setTiposMembresia(tiposMembresia.map(tm =>
-                tm.tipoMembresiaId === editingMembresia.tipoMembresiaId
-                    ? { ...formDataMembresia, tipoMembresiaId: editingMembresia.tipoMembresiaId }
-                    : tm
-            ));
-        } else {
-            const nuevaMembresia: ITipoMembresia = {
-                ...formDataMembresia,
-                tipoMembresiaId: Date.now()
-            };
-            setTiposMembresia([...tiposMembresia, nuevaMembresia]);
+        try {
+            if (editingMembresia) {
+                // ACTUALIZAR
+                await ClienteApi.actualizarTipoMembresia(editingMembresia.tipoMembresiaId, formDataMembresia);
+            } else {
+                // CREAR NUEVA
+                const { id } = await ClienteApi.crearTipoMembresia(formDataMembresia);
+                console.log(`Tipo de Membresía creado con ID: ${id}`);
+            }
+            // Recargar la lista después de la operación
+            await recargarTiposMembresia();
+            setModalMembresiaOpen(false);
+        } catch (error) {
+            alert(`Error al guardar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setLoading(false);
         }
-        setModalMembresiaOpen(false);
     };
 
-    const handleEliminarMembresia = (id: number) => {
+    const handleEliminarMembresia = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de membresía?')) {
-            setTiposMembresia(tiposMembresia.filter(tm => tm.tipoMembresiaId !== id));
+            setLoading(true);
+            try {
+                await ClienteApi.eliminarTipoMembresia(id);
+                // Actualizar la lista localmente
+                setTiposMembresia(tiposMembresia.filter(tm => tm.tipoMembresiaId !== id));
+            } catch (error) {
+                alert(`Error al eliminar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -116,6 +145,13 @@ export default function ConfiguracionesPagina({
     };
 
     return (
+        <div className="p-6">
+            {loading && (
+                 // Añadir un overlay de carga
+                 <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+                    <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
+                 </div>
+            )}
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
@@ -474,6 +510,7 @@ export default function ConfiguracionesPagina({
                     </div>
                 </div>
             )}
+        </div>
         </div>
     );
 }
