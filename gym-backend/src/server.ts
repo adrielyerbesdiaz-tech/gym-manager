@@ -46,7 +46,7 @@ const servicioEquipamiento = new ServicioEquipamiento(gestorEquipamiento);
 const servicioAsistencia = new ServicioAsistencia(gestorAsistencia, gestorCliente);
 const servicioMantenimiento = new ServicioMantenimiento(gestorMantenimiento);
 const servicioTipoMembresia = new ServicioTipoMembresia(gestorTipoMembresia);
-const servicioMembresia = new ServicioMembresia(gestorMembresia);
+const servicioMembresia = new ServicioMembresia(gestorMembresia, gestorTipoMembresia);
 const servicioUsuario = new ServicioUsuario(gestorUsuario);
 const servicioEquipamientoAccesorio = new ServicioEquipamientoAccesorio(gestorEquipamientoAccesorio);
 const servicioPago = new ServicioPago(gestorPago);
@@ -836,6 +836,123 @@ app.delete('/api/membresias/:id', (req: Request, res: Response) => {
         const id = Number(req.params.id);
         servicioMembresia.eliminar(id);
         res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Obtener membresías activas de un usuario
+app.get('/api/membresias/usuario/:usuarioId/activas', (req: Request, res: Response) => {
+    try {
+        const usuarioId = Number(req.params.usuarioId);
+        const membresiasActivas = servicioMembresia.obtenerMembresiasActivas(usuarioId);
+        res.json(membresiasActivas);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Obtener todas las membresías activas
+app.get('/api/membresias/activas', (req: Request, res: Response) => {
+    try {
+        const membresiasActivas = servicioMembresia.obtenerMembresiasActivas();
+        res.json(membresiasActivas);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Obtener membresías próximas a vencer
+app.get('/api/membresias/proximas-vencer', (req: Request, res: Response) => {
+    try {
+        const usuarioId = req.query.usuarioId ? Number(req.query.usuarioId) : undefined;
+        const membresiasProximas = servicioMembresia.obtenerMembresiasProximasAVencer(usuarioId);
+        res.json(membresiasProximas);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Obtener membresías vencidas
+app.get('/api/membresias/vencidas', (req: Request, res: Response) => {
+    try {
+        const usuarioId = req.query.usuarioId ? Number(req.query.usuarioId) : undefined;
+        const membresiasVencidas = servicioMembresia.obtenerMembresiasVencidas(usuarioId);
+        res.json(membresiasVencidas);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Verificar si un usuario tiene membresía activa
+app.get('/api/membresias/usuario/:usuarioId/tiene-activa', (req: Request, res: Response) => {
+    try {
+        const usuarioId = Number(req.params.usuarioId);
+        const tieneActiva = servicioMembresia.tieneMembresiaActiva(usuarioId);
+        res.json({ tieneMembresiaActiva: tieneActiva });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Renovar una membresía
+app.post('/api/membresias/:id/renovar', (req: Request, res: Response) => {
+    try {
+        const membresiaId = Number(req.params.id);
+        const { nuevoTipoMembresiaID } = req.body; // Opcional
+        
+        const nuevaMembresiaId = servicioMembresia.renovar(
+            membresiaId, 
+            nuevoTipoMembresiaID
+        );
+        
+        res.json({ 
+            success: true, 
+            id: nuevaMembresiaId,
+            message: 'Membresía renovada exitosamente'
+        });
+    } catch (error) {
+        res.status(400).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Obtener estado de una membresía específica
+app.get('/api/membresias/:id/estado', (req: Request, res: Response) => {
+    try {
+        const membresiaId = Number(req.params.id);
+        const membresia = servicioMembresia.buscarPorId(membresiaId);
+        
+        const estado = {
+            activa: membresia.estaActiva(),
+            proximaAVencer: membresia.estaProximaAVencer(),
+            vencida: membresia.estaVencida(),
+            fechaInicio: membresia.getFechaInicio(),
+            fechaVencimiento: membresia.getFechaVencimiento(),
+            diasRestantes: Math.ceil((membresia.getFechaVencimiento().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+        };
+        
+        res.json(estado);
     } catch (error) {
         res.status(400).json({ 
             success: false, 
