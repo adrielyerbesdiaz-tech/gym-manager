@@ -1,4 +1,4 @@
-import { tipoMembresia } from '../entidades/tipoMembresia';
+import { tipoMembresia } from '../entidades/TipoMembresia';
 import { GestorTipoMembresia } from '../gestores/GestorTipoMembresia';
 
 export class ServicioTipoMembresia {

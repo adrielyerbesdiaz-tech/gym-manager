@@ -1,10 +1,10 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Plus, Calendar, User, FileText, CreditCard, Wallet, BarChart3 } from 'lucide-react';
-import type { IPago } from '../../models/IPago';
-import type { IMantenimiento } from '../../models/IMantenimiento';
-import type { IMembresia } from '../../models/IMembresia';
-import type { IEquipamiento } from '../../models/IEquipamiento';
-import type { ICliente } from '../../models/ICliente';
+import type { IPago } from '../models/IPago';
+import type { IMantenimiento } from '../models/IMantenimiento';
+import type { IMembresia } from '../models/IMembresia';
+import type { IEquipamiento } from '../models/IEquipamiento';
+import type { ICliente } from '../models/ICliente';
 
 interface FinanzasPaginaProps {
     pagos: IPago[];

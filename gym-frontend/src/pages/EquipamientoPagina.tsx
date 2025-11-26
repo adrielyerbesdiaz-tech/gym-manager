@@ -1,8 +1,8 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Plus, Edit2, Trash2, X, Check, Search, Wrench, Calendar, DollarSign, FileText, Dumbbell, Package } from 'lucide-react';
-import type { IEquipamiento } from '../../models/IEquipamiento';
-import type { IEquipoAccesorio } from '../../models/IEquipoAccesorio';
-import type { IMantenimiento } from '../../models/IMantenimiento';
+import type { IEquipamiento } from '../models/IEquipamiento';
+import type { IEquipoAccesorio } from '../models/IEquipoAccesorio';
+import type { IMantenimiento } from '../models/IMantenimiento';
 
 interface EquipamientoPaginaProps {
     equipamiento: IEquipamiento[];

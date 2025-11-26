@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import AsistenciaPagina from './pages/asistencias/AsistenciaPagina';
-import ClientesPagina from './pages/clientes/ClientesPagina';
-import ConfiguracionesPagina from './pages/configuraciones/ConfiguracionesPagina';
-import LoginPagina from './pages/login/LoginPagina';
+import AsistenciaPagina from './pages/AsistenciaPagina';
+import ClientesPagina from './pages/ClientesPagina';
+import ConfiguracionesPagina from './pages/ConfiguracionesPagina';
+import LoginPagina from './pages/LoginPagina';
 import { LogOut, Dumbbell, Users, Settings } from 'lucide-react';
 import type { IAsistencia } from './models/IAsistencia';
 import type { IMembresia } from './models/IMembresia';
 import type { ITipoMembresia } from './models/ITipoMembresia';
 import type { ICliente } from './models/ICliente';
-import { ClienteApi } from './api/ClienteApi';
+import { AsistenciaApi } from './api/asistencias/ApiAsistencia';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

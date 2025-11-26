@@ -1,4 +1,4 @@
-import { membresia } from '../entidades/membresia';
+import { membresia } from '../entidades/Membresia';
 import { GestorMembresia } from '../gestores/GestorMembresia';
 import { GestorTipoMembresia } from '../gestores/GestorTipoMembresia';
 

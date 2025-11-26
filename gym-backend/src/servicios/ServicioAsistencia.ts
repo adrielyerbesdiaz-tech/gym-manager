@@ -1,4 +1,4 @@
-import { asistencia } from '../entidades/asistencia';
+import { asistencia } from '../entidades/Asistencia';
 import { GestorAsistencia } from '../gestores/GestorAsistencia';
 import { GestorCliente } from '../gestores/GestorCliente';
 
@@ -107,7 +107,7 @@ export class ServicioAsistencia {
                 asistenciaId: asist.getAsistenciaId(),
                 fechaCheckIn: asist.getFechaCheckIn(),
                 cliente: cliente ? {
-                    id: cliente.getId(),
+                    id: cliente.getClienteId(),
                     nombre: cliente.getNombreCompleto(),
                     telefono: cliente.getTelefono()
                 } : null

@@ -1,4 +1,4 @@
-import { tipoMembresia } from '../entidades/tipoMembresia';
+import { tipoMembresia } from '../entidades/TipoMembresia';
 import { GestorBase } from './GestorBase';
 
 export class GestorTipoMembresia extends GestorBase<tipoMembresia> {

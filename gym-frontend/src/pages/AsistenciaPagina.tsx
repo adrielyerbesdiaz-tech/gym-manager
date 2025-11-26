@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Dumbbell, CheckCircle, UserCheck, LogIn } from 'lucide-react';
-import { ClienteApi } from '../../api/ClienteApi';
+import { AsistenciaApi } from '../../api/asistencias/ApiAsistencia';
 
 interface AsistenciaPaginaProps {
     onLoginClick?: () => void;
@@ -23,14 +23,14 @@ export default function AsistenciaPagina({ onLoginClick, onRegisterAttendance }:
     
     try {
         // 1. Buscar cliente por teléfono exacto
-        const cliente = await ClienteApi.buscarClientePorTelefono(memberId.trim());
+        const cliente = await AsistenciaApi.buscarClientePorTelefono(memberId.trim());
         
         if (!cliente) {
             throw new Error('Cliente no encontrado. Verifique el teléfono.');
         }
 
         // 2. Verificar si ya registró asistencia hoy
-        const yaRegistro = await ClienteApi.verificarAsistenciaHoy(cliente.id);
+        const yaRegistro = await AsistenciaApi.verificarAsistenciaHoy(cliente.id);
         
         if (yaRegistro) {
             throw new Error(`${cliente.nombreCompleto} ya registró su asistencia hoy.`);
@@ -43,7 +43,7 @@ export default function AsistenciaPagina({ onLoginClick, onRegisterAttendance }:
             registroExitoso = await onRegisterAttendance(cliente.id, cliente.nombreCompleto);
         } else {
             // Fallback: registrar directamente
-            await ClienteApi.registrarAsistencia(cliente.id);
+            await AsistenciaApi.registrarAsistencia(cliente.id);
             registroExitoso = true;
         }
 

@@ -1,6 +1,6 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Settings, Edit2, Trash2, X, Check, Plus, DollarSign, Calendar, FileText, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react';
-import type { ITipoMembresia } from '../../models/ITipoMembresia';
+import type { ITipoMembresia } from '../models/ITipoMembresia';
 import { TipoMembresiaApi } from '../../api/membresias/ApiTipoMembresia';
 
 interface ConfiguracionesPaginaProps {

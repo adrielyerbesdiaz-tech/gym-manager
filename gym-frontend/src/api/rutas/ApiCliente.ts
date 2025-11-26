@@ -1,5 +1,5 @@
-import { ApiBase } from '../base/ApiBase';
-import { transformClienteFromBackend } from '../base/Transformadores';
+import { ApiBase } from '../ApiBase';
+import { transformClienteFromBackend } from '../Transformadores';
 
 export class ApiCliente {
   static async obtenerClientes(): Promise<any[]> {

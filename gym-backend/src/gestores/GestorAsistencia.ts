@@ -1,4 +1,4 @@
-import { asistencia } from '../entidades/asistencia';
+import { asistencia } from '../entidades/Asistencia';
 import { GestorBase } from './GestorBase';
 
 export class GestorAsistencia extends GestorBase<asistencia> {

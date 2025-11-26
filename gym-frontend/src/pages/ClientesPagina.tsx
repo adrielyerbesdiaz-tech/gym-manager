@@ -1,10 +1,10 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { UserPlus, Edit2, Trash2, X, Check, Search, Phone, FileText, Calendar, User, Filter, CreditCard, RefreshCw, Clock } from 'lucide-react';
-import type { ICliente } from '../../models/ICliente';
-import type { IAsistencia } from '../../models/IAsistencia';
-import type { IMembresia } from '../../models/IMembresia';
-import type { ITipoMembresia } from '../../models/ITipoMembresia';
-import type { IPago } from '../../models/IPago';
+import type { ICliente } from '../models/ICliente';
+import type { IAsistencia } from '../models/IAsistencia';
+import type { IMembresia } from '../models/IMembresia';
+import type { ITipoMembresia } from '../models/ITipoMembresia';
+import type { IPago } from '../models/IPago';
 
 interface ClientesPaginaProps {
     clientes: ICliente[];

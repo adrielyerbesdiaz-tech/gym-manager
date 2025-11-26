@@ -6,7 +6,7 @@ import { crearRouterEquipamiento } from './Equipamiento';
 import { crearRouterMantenimiento } from './Mantenimiento';
 import { crearRouterMembresias } from './Membresias';
 import { crearRouterUsuarios } from './Usuarios';
-import { crearRouterAccesorios } from './Accesorios';
+import { crearRouterAccesorios } from './EquipamientoAccesorios';
 import { crearRouterPagos } from './Pagos';
 
 // Importar servicios (se pasarán como dependencias)
