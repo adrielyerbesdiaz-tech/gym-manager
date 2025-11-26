@@ -2,13 +2,16 @@
 export class tipoMembresia{
     private readonly tipoMembresiaID: number;
     private nombre: string;
-    private duracionDias: number;
+    private duracionValor: number;
+    private duracionTipo: string;
     private precio: number;
 
-    constructor(nombre: string, duracionDias: number, precio: number){
-        this.tipoMembresiaID = 0;
+
+    constructor(nombre: string, duracionValor: number, duracionTipo: string, precio: number, tipoMembresiaID?:number){
+        this.tipoMembresiaID = tipoMembresiaID || 0;
         this.nombre = nombre;
-        this.duracionDias = duracionDias;
+        this.duracionValor = duracionValor;
+        this.duracionTipo = duracionTipo;
         this.precio = precio;
     }
 
@@ -20,8 +23,12 @@ export class tipoMembresia{
         return this.nombre;
     }
 
-    public getDuracionDias(): number {
-        return this.duracionDias;
+    public getDuracionValor(): number {
+        return this.duracionValor;
+    }
+
+    public getDuracionTipo(): string {
+        return this.duracionTipo;
     }
 
     public getPrecio(): number {
@@ -36,8 +43,12 @@ export class tipoMembresia{
         this.nombre = nombre;
     }
 
-    public setDuracionDias(duracionDias: number): void {
-        this.duracionDias = duracionDias;
+    public setDuracionValor(duracionValor: number): void {
+        this.duracionValor = duracionValor;
+    }
+
+    public setDuracionTipo(duracionTipo: string): void {
+        this.duracionTipo = duracionTipo;
     }
 
 }

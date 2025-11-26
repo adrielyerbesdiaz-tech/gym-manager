@@ -5,11 +5,11 @@ export class pago{
     private readonly monto: number;
     private readonly fechaPago: Date;
 
-    constructor(membresiaID: number, monto: number){
-        this.pagoId = 0;
+    constructor(membresiaID: number, monto: number, pagoId?: number, fechaPago?: Date){
+        this.pagoId = pagoId || 0;
         this.membresiaID = membresiaID;
         this.monto = monto;
-        this.fechaPago = new Date();
+        this.fechaPago = fechaPago || new Date();
     }
 
     public getPagoId(): number {

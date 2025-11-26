@@ -9,3 +9,5 @@ export class mantenimiento{
         this.fechaMantenimiento = new Date();
     }
 }
+
+//esto no debe funcionar con la base de datos ya que son diferentes
