@@ -60,26 +60,6 @@ const servicios: DependenciasServicios = {
 // Configurar todas las rutas
 app.use('/api', configurarRutas(servicios));
 
-// Función para verificar/migrar la base de datos
-function verificarBaseDeDatos() {
-    try {
-        const checkColumn = db.prepare(`
-            SELECT COUNT(*) as exists FROM pragma_table_info('Membresias') 
-            WHERE name = 'Fecha_Vencimiento'
-        `).get() as { exists: number };
-
-        if (checkColumn.exists === 0) {
-            console.log('Agregando columna Fecha_Vencimiento a la tabla Membresias...');
-            db.prepare('ALTER TABLE Membresias ADD COLUMN Fecha_Vencimiento TEXT').run();
-            console.log('Columna Fecha_Vencimiento agregada exitosamente.');
-        }
-    } catch (error) {
-        console.error('Error al verificar la base de datos:', error);
-    }
-}
-
-verificarBaseDeDatos();
-
 // Test route
 app.get('/api/test', (req, res) => {
     const result = db.prepare('SELECT * FROM Clientes').get();
