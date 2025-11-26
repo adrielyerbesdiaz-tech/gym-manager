@@ -5,6 +5,9 @@ import type { IAsistencia } from '../models/IAsistencia';
 import type { IMembresia } from '../models/IMembresia';
 import type { ITipoMembresia } from '../models/ITipoMembresia';
 import type { IPago } from '../models/IPago';
+import { ClienteApi } from '../api/rutas/ApiCliente';
+import { MembresiaApi } from '../api/rutas/ApiMembresia';
+import { PagoApi } from '../api/rutas/ApiPago';
 
 interface ClientesPaginaProps {
     clientes: ICliente[];
@@ -24,12 +27,13 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
     const [modalOpen, setModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<ICliente | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [formData, setFormData] = useState<Omit<ICliente, 'id' | 'fechaRegistro'>>({
+    const [formData, setFormData] = useState({
         nombreCompleto: '',
         telefono: '',
-        idTipoMembresia: 1,
         notas: ''
     });
+    // Estado separado para el tipo de membresía al crear nuevo cliente
+    const [tipoMembresiaNuevo, setTipoMembresiaNuevo] = useState<number>(tiposMembresia[0]?.tipoMembresiaId || 1);
 
     // Estados para Historial
     const [fechaInicio, setFechaInicio] = useState('');
@@ -48,9 +52,29 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
         cliente.telefono.includes(searchTerm)
     );
 
+    // Función para obtener la membresía activa de un cliente
+    const obtenerMembresiaActiva = (clienteId: number) => {
+        return membresias.find(m => 
+            m.clienteId === clienteId && 
+            m.estado === 'Activa'
+        );
+    };
+
+    // Función para obtener el tipo de membresía de un cliente
+    const obtenerTipoMembresiaCliente = (clienteId: number) => {
+        const membresiaActiva = obtenerMembresiaActiva(clienteId);
+        if (!membresiaActiva) return null;
+        return tiposMembresia.find(t => t.tipoMembresiaId === membresiaActiva.tipoMembresiaId);
+    };
+
     const handleNuevoCliente = () => {
         setEditingClient(null);
-        setFormData({ nombreCompleto: '', telefono: '', idTipoMembresia: tiposMembresia[0]?.tipoMembresiaId || 1, notas: '' });
+        setFormData({ 
+            nombreCompleto: '', 
+            telefono: '', 
+            notas: '' 
+        });
+        setTipoMembresiaNuevo(tiposMembresia[0]?.tipoMembresiaId || 1);
         setModalOpen(true);
     };
 
@@ -59,64 +83,68 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
         setFormData({
             nombreCompleto: cliente.nombreCompleto,
             telefono: cliente.telefono,
-            idTipoMembresia: cliente.idTipoMembresia,
             notas: cliente.notas
         });
         setModalOpen(true);
     };
 
-    const handleGuardarCliente = (e: React.FormEvent) => {
+    const handleGuardarCliente = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (editingClient) {
-            // Al editar, solo actualizar el cliente
-            setClientes(clientes.map(c =>
-                c.id === editingClient.id
-                    ? { ...formData, id: editingClient.id, fechaRegistro: editingClient.fechaRegistro }
-                    : c
-            ));
-        } else {
-            // Al crear nuevo cliente, auto-crear membresía y pago
-            const clienteId = Date.now();
-            const membresiaId = clienteId + 1;
-            const pagoId = clienteId + 2;
+        try {
+            if (editingClient) {
+                // Actualizar cliente existente
+                await ClienteApi.actualizarCliente(editingClient.id, formData);
+                
+                // Recargar datos
+                const clientesActualizados = await ClienteApi.obtenerClientes();
+                setClientes(clientesActualizados);
+            } else {
+                // Crear nuevo cliente
+                const nuevoCliente = await ClienteApi.crearCliente(formData);
+                
+                // Crear membresía automáticamente
+                const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaId === tipoMembresiaNuevo);
+                const nuevaMembresia = await MembresiaApi.crearMembresia({
+                    tipoMembresiaID: tipoMembresiaNuevo,
+                    usuarioID: nuevoCliente.id
+                });
 
-            const nuevoCliente: ICliente = {
-                ...formData,
-                id: clienteId,
-                fechaRegistro: new Date().toISOString().split('T')[0]
-            };
+                // Crear pago inicial automáticamente
+                await PagoApi.crearPago({
+                    membresiaId: nuevaMembresia.id,
+                    monto: tipoMembresia?.precio || 0,
+                    fechaPago: new Date().toISOString().split('T')[0]
+                });
 
-            // Crear membresía automáticamente
-            const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaId === formData.idTipoMembresia);
-            const nuevaMembresia: IMembresia = {
-                membresiaId: membresiaId,
-                tipoMembresiaId: formData.idTipoMembresia,
-                clienteId: clienteId,
-                fechaInicio: new Date().toISOString().split('T')[0],
-                tipoMembresia: tipoMembresia,
-                cliente: nuevoCliente,
-                estado: 'Activa'
-            };
+                // Recargar todos los datos
+                const [clientesData, membresiasData, pagosData] = await Promise.all([
+                    ClienteApi.obtenerClientes(),
+                    MembresiaApi.obtenerMembresias(),
+                    PagoApi.obtenerPagos()
+                ]);
 
-            // Crear pago inicial automáticamente
-            const nuevoPago: IPago = {
-                pagoId: pagoId,
-                membresiaId: membresiaId,
-                monto: tipoMembresia?.precio || 0,
-                fechaPago: new Date().toISOString().split('T')[0]
-            };
-
-            setClientes([...clientes, nuevoCliente]);
-            setMembresias([...membresias, nuevaMembresia]);
-            setPagos([...pagos, nuevoPago]);
+                setClientes(clientesData);
+                setMembresias(membresiasData);
+                setPagos(pagosData);
+            }
+            setModalOpen(false);
+        } catch (error) {
+            console.error('Error guardando cliente:', error);
+            alert('Error al guardar el cliente');
         }
-        setModalOpen(false);
     };
 
-    const handleEliminarCliente = (id: number) => {
+    const handleEliminarCliente = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este cliente?')) {
-            setClientes(clientes.filter(c => c.id !== id));
+            try {
+                await ClienteApi.eliminarCliente(id);
+                const clientesActualizados = await ClienteApi.obtenerClientes();
+                setClientes(clientesActualizados);
+            } catch (error) {
+                console.error('Error eliminando cliente:', error);
+                alert('Error al eliminar el cliente');
+            }
         }
     };
 
@@ -151,7 +179,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
 
         // Calcular fecha de vencimiento
         const fechaInicio = new Date(membresia.fechaInicio);
-        const duracionDias = tipoMembresia?.duracionDias || 30;
+        const duracionDias = tipoMembresia?.duracionValor || 30;
         const fechaVencimiento = new Date(fechaInicio);
         fechaVencimiento.setDate(fechaVencimiento.getDate() + duracionDias);
 
@@ -174,24 +202,32 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
         setRenovarModalOpen(true);
     };
 
-    const handleGuardarRenovacion = (e: React.FormEvent) => {
+    const handleGuardarRenovacion = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!membresiaARenovar) return;
 
-        const nuevaMembresia: IMembresia = {
-            membresiaId: Date.now(),
-            tipoMembresiaId: tipoMembresiaSeleccionada,
-            clienteId: membresiaARenovar.clienteId,
-            fechaInicio: new Date().toISOString().split('T')[0],
-            tipoMembresia: tiposMembresia.find(t => t.tipoMembresiaId === tipoMembresiaSeleccionada),
-            cliente: membresiaARenovar.cliente,
-            estado: 'Activa'
-        };
+        try {
+            await MembresiaApi.renovarMembresia(
+                membresiaARenovar.membresiaId, 
+                tipoMembresiaSeleccionada
+            );
 
-        setMembresias([nuevaMembresia, ...membresias]);
-        setRenovarModalOpen(false);
-        setMembresiaARenovar(null);
+            // Recargar membresías y pagos
+            const [membresiasData, pagosData] = await Promise.all([
+                MembresiaApi.obtenerMembresias(),
+                PagoApi.obtenerPagos()
+            ]);
+
+            setMembresias(membresiasData);
+            setPagos(pagosData);
+            
+            setRenovarModalOpen(false);
+            setMembresiaARenovar(null);
+        } catch (error) {
+            console.error('Error renovando membresía:', error);
+            alert('Error al renovar la membresía');
+        }
     };
 
     return (
@@ -290,7 +326,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                                 </th>
                                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                                     <div className="flex items-center gap-2">
-                                                        <CreditCard className="w-4 h-4" /> Membresía
+                                                        <CreditCard className="w-4 h-4" /> Membresía Actual
                                                     </div>
                                                 </th>
                                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -320,7 +356,9 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                                 </tr>
                                             ) : (
                                                 clientesFiltrados.map((cliente) => {
-                                                    const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaId === cliente.idTipoMembresia);
+                                                    const tipoMembresia = obtenerTipoMembresiaCliente(cliente.id);
+                                                    const membresiaActiva = obtenerMembresiaActiva(cliente.id);
+                                                    
                                                     return (
                                                         <tr key={cliente.id} className="hover:bg-gray-50 transition-colors group">
                                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -334,9 +372,19 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                                    {tipoMembresia?.nombre || 'N/A'}
-                                                                </span>
+                                                                {tipoMembresia ? (
+                                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                                                        membresiaActiva?.estado === 'Activa' 
+                                                                            ? 'bg-green-100 text-green-800' 
+                                                                            : 'bg-red-100 text-red-800'
+                                                                    }`}>
+                                                                        {tipoMembresia.nombre} ({membresiaActiva?.estado || 'N/A'})
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                                        Sin membresía
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                             <td className="px-6 py-4">
                                                                 <div className="text-sm text-gray-600 max-w-xs truncate" title={cliente.notas}>
@@ -381,6 +429,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                             </div>
                         )}
 
+                        {/* Resto del código se mantiene igual... */}
                         {/* TAB 2: HISTORIAL */}
                         {tabActual === 'historial' && (
                             <div className="space-y-6">
@@ -654,28 +703,29 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Tipo de Membresía
-                                </label>
-                                <select
-                                    required
-                                    value={formData.idTipoMembresia}
-                                    onChange={(e) => setFormData({ ...formData, idTipoMembresia: Number(e.target.value) })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    {tiposMembresia.map(tipo => (
-                                        <option key={tipo.tipoMembresiaId} value={tipo.tipoMembresiaId}>
-                                            {tipo.nombre} - ${tipo.precio} ({tipo.duracionDias} días)
-                                        </option>
-                                    ))}
-                                </select>
-                                {!editingClient && (
+                            {/* Solo mostrar tipo de membresía cuando se crea un nuevo cliente */}
+                            {!editingClient && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Tipo de Membresía Inicial
+                                    </label>
+                                    <select
+                                        required
+                                        value={tipoMembresiaNuevo}
+                                        onChange={(e) => setTipoMembresiaNuevo(Number(e.target.value))}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        {tiposMembresia.map(tipo => (
+                                            <option key={tipo.tipoMembresiaId} value={tipo.tipoMembresiaId}>
+                                                {tipo.nombre} - ${tipo.precio} ({tipo.duracionValor} días)
+                                            </option>
+                                        ))}
+                                    </select>
                                     <p className="mt-1 text-xs text-green-600">
                                         ✓ Se creará automáticamente la membresía y el pago inicial
                                     </p>
-                                )}
-                            </div>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -744,7 +794,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                 >
                                     {tiposMembresia.map(tipo => (
                                         <option key={tipo.tipoMembresiaId} value={tipo.tipoMembresiaId}>
-                                            {tipo.nombre} - ${tipo.precio} ({tipo.duracionDias} días)
+                                            {tipo.nombre} - ${tipo.precio} ({tipo.duracionValor} días)
                                         </option>
                                     ))}
                                 </select>

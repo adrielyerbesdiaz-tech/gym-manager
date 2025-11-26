@@ -1,7 +1,7 @@
 import { ApiBase } from '../ApiBase';
 import { transformClienteFromBackend } from '../Transformadores';
 
-export class ApiCliente {
+export class ClienteApi {
   static async obtenerClientes(): Promise<any[]> {
     const data = await ApiBase.get('/clientes');
     return data.map(transformClienteFromBackend);

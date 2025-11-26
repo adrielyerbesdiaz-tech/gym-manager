@@ -8,7 +8,8 @@ import type { IAsistencia } from './models/IAsistencia';
 import type { IMembresia } from './models/IMembresia';
 import type { ITipoMembresia } from './models/ITipoMembresia';
 import type { ICliente } from './models/ICliente';
-import { AsistenciaApi } from './api/asistencias/ApiAsistencia';
+import type { IPago } from './models/IPago';
+import { MembresiaApi, AsistenciaApi, TipoMembresiaApi, ClienteApi, PagoApi } from './api';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -23,6 +24,7 @@ function App() {
   const [asistencias, setAsistencias] = useState<IAsistencia[]>([]);
   const [membresias, setMembresias] = useState<IMembresia[]>([]);
   const [tiposMembresia, setTiposMembresia] = useState<ITipoMembresia[]>([]);
+  const [pagos, setPagos] = useState<IPago[]>([]);
   
   // ==================== LÓGICA DE NAVEGACIÓN Y AUTENTICACIÓN ====================
   const handleLoginClick = () => setShowLogin(true);
@@ -46,7 +48,7 @@ function App() {
   const handleRegisterAttendance = async (clienteId: number, clienteName: string): Promise<boolean> => {
     try {
       // Verificar si ya registró hoy
-      const yaRegistro = await ClienteApi.verificarAsistenciaHoy(clienteId);
+      const yaRegistro = await AsistenciaApi.verificarAsistenciaHoy(clienteId);
       
       if (yaRegistro) {
         alert(`${clienteName} ya registró su asistencia hoy.`);
@@ -54,7 +56,7 @@ function App() {
       }
 
       // Registrar asistencia
-      await ClienteApi.registrarAsistencia(clienteId);
+      await AsistenciaApi.registrarAsistencia(clienteId);
       return true;
     } catch (error) {
       console.error('Error registrando asistencia:', error);
@@ -71,20 +73,25 @@ function App() {
     try {
       console.log('Iniciando carga de datos...');
       
-      const [clientesData, tiposMembresiaData] = await Promise.all([
+      const [clientesData, tiposMembresiaData, asistenciasData, membresiasData, pagosData] = await Promise.all([
         ClienteApi.obtenerClientes(),
-        ClienteApi.obtenerTiposMembresia()
+        TipoMembresiaApi.obtenerTiposMembresia(),
+        AsistenciaApi.obtenerAsistenciasHoy(),
+        MembresiaApi.obtenerMembresias(),
+        PagoApi.obtenerPagos()
       ]);
       
       console.log('Clientes cargados:', clientesData.length);
       console.log('Tipos de membresía cargados:', tiposMembresiaData.length);
+      console.log('Asistencias cargadas:', asistenciasData.length);
+      console.log('Membresías cargadas:', membresiasData.length);
+      console.log('Pagos cargados:', pagosData.length);
       
       setClientes(clientesData);
       setTiposMembresia(tiposMembresiaData);
-      
-      // Mantener asistencias y membresías vacías por ahora
-      setAsistencias([]); 
-      setMembresias([]);
+      setAsistencias(asistenciasData);
+      setMembresias(membresiasData);
+      setPagos(pagosData);
 
     } catch (error) {
       console.error('Error cargando datos iniciales:', error);
@@ -217,7 +224,8 @@ function App() {
               membresias={membresias}
               setMembresias={setMembresias}
               tiposMembresia={tiposMembresia}
-              onRecargarClientes={cargarDatosIniciales}
+              pagos={pagos}
+              setPagos={setPagos}
             />
           ) : (
             <ConfiguracionesPagina

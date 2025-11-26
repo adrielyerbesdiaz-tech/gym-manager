@@ -1,4 +1,9 @@
-export { ApiCliente } from './rutas/ApiCliente';
+export { ClienteApi } from './rutas/ApiCliente';
 export { TipoMembresiaApi } from './rutas/ApiTipoMembresia';
 export { AsistenciaApi } from './rutas/ApiAsistencia';
 export { MembresiaApi } from './rutas/ApiMembresia';
+export { EquipamientoApi } from './rutas/ApiEquipamiento';
+export { MantenimientoApi } from './rutas/ApiMantenimiento';
+export { EquipamientoAccesorioApi } from './rutas/ApiEquipamientoAccesorio';
+export { PagoApi } from './rutas/ApiPago';
+export { UsuarioApi } from './rutas/ApiUsuario';

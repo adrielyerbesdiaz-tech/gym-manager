@@ -86,12 +86,6 @@ export class ServicioCliente {
             throw new Error('Cliente no encontrado.');
         }
         
-        // TODO: Agregar cuando tengas ServicioMembresia
-        // const tieneMembresia = this.gestorMembresia.tieneActiva(id);
-        // if (tieneMembresia) {
-        //     throw new Error('No se puede eliminar: el cliente tiene una membresía activa.');
-        // }
-        
         const eliminado = this.gestorCliente.eliminar(id);
         
         if (!eliminado) {

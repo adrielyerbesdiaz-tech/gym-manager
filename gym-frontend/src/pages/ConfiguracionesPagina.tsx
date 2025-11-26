@@ -1,7 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Settings, Edit2, Trash2, X, Check, Plus, DollarSign, Calendar, FileText, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import type { ITipoMembresia } from '../models/ITipoMembresia';
-import { TipoMembresiaApi } from '../../api/membresias/ApiTipoMembresia';
+import { TipoMembresiaApi } from '../api/rutas/ApiTipoMembresia';
 
 interface ConfiguracionesPaginaProps {
     tiposMembresia: ITipoMembresia[];
@@ -37,8 +37,7 @@ export default function ConfiguracionesPagina({
     const [formDataMembresia, setFormDataMembresia] = useState<Omit<ITipoMembresia, 'tipoMembresiaId'>>({
         nombre: '',
         duracionValor: 1,
-        duracionTipo: 'meses', 
-        duracionDias: 30,      
+        duracionTipo: 'meses',
         precio: 0
     });
 
@@ -48,7 +47,6 @@ export default function ConfiguracionesPagina({
             nombre: '', 
             duracionValor: 1, 
             duracionTipo: 'meses', 
-            duracionDias: 30, 
             precio: 0 
         });
         setModalMembresiaOpen(true);
@@ -60,49 +58,55 @@ export default function ConfiguracionesPagina({
             nombre: membresia.nombre,
             duracionValor: membresia.duracionValor,
             duracionTipo: membresia.duracionTipo,
-            duracionDias: membresia.duracionDias,
             precio: membresia.precio
         });
         setModalMembresiaOpen(true);
     };
 
     const handleGuardarMembresia = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-        if (editingMembresia) {
-            // ACTUALIZAR
-            await TipoMembresiaApi.actualizarTipoMembresia(editingMembresia.tipoMembresiaId, formDataMembresia);
-        } else {
-            // CREAR NUEVA
-            const { id } = await TipoMembresiaApi.crearTipoMembresia(formDataMembresia);
-            console.log(`Tipo de Membresía creado con ID: ${id}`);
-        }
-        // Recargar la lista desde el servidor después de la operación
-        await recargarTiposMembresia();
-        setModalMembresiaOpen(false);
-    } catch (error) {
-        alert(`Error al guardar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
-    } finally {
-        setLoading(false);
-    }
-};
-
-const handleEliminarMembresia = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de membresía?')) {
+        e.preventDefault();
         setLoading(true);
+
         try {
-            await TipoMembresiaApi.eliminarTipoMembresia(id);
-            // Recargar desde el servidor en lugar de actualizar localmente
+            if (editingMembresia) {
+                // ACTUALIZAR
+                await TipoMembresiaApi.actualizarTipoMembresia(
+                    editingMembresia.tipoMembresiaId, 
+                    formDataMembresia
+                );
+            } else {
+                // CREAR NUEVA
+                const nuevoTipo = await TipoMembresiaApi.crearTipoMembresia(formDataMembresia);
+                console.log(`Tipo de Membresía creado con ID: ${nuevoTipo.id}`);
+            }
+            
+            // Recargar la lista desde el servidor después de la operación
             await recargarTiposMembresia();
+            setModalMembresiaOpen(false);
+            
         } catch (error) {
-            alert(`Error al eliminar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            console.error('Error guardando tipo de membresía:', error);
+            alert(`Error al guardar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
         } finally {
             setLoading(false);
         }
-    }
-};
+    };
+
+    const handleEliminarMembresia = async (id: number) => {
+        if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de membresía?')) {
+            setLoading(true);
+            try {
+                await TipoMembresiaApi.eliminarTipoMembresia(id);
+                // Recargar desde el servidor en lugar de actualizar localmente
+                await recargarTiposMembresia();
+            } catch (error) {
+                console.error('Error eliminando tipo de membresía:', error);
+                alert(`Error al eliminar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
 
     // ==================== CAMBIO DE CONTRASEÑA ====================
     const [passwordData, setPasswordData] = useState({
@@ -154,17 +158,24 @@ const handleEliminarMembresia = async (id: number) => {
         }
     };
 
-    const calcularDias = (valor: number, tipo: string): number => {
-        switch(tipo) {
+    // Función para calcular la duración en días para mostrar en la tabla
+    const calcularDuracionEnDias = (duracionValor: number, duracionTipo: string): number => {
+        switch(duracionTipo) {
             case 'dias':
-                return valor;
+                return duracionValor;
             case 'semanas':
-                return valor * 7;
+                return duracionValor * 7;
             case 'meses':
-                return valor * 30; // Aproximado
+                return duracionValor * 30; // Aproximado
             default:
-                return valor;
+                return duracionValor;
         }
+    };
+
+    // Función para formatear la duración para mostrar
+    const formatearDuracion = (membresia: ITipoMembresia): string => {
+        const dias = calcularDuracionEnDias(membresia.duracionValor, membresia.duracionTipo);
+        return `${membresia.duracionValor} ${membresia.duracionTipo} (${dias} días)`;
     };
 
     return (
@@ -256,7 +267,7 @@ const handleEliminarMembresia = async (id: number) => {
                                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                                     <div className="flex items-center gap-2">
                                                         <Calendar className="w-4 h-4" />
-                                                        Duración (días)
+                                                        Duración
                                                     </div>
                                                 </th>
                                                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -289,7 +300,7 @@ const handleEliminarMembresia = async (id: number) => {
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                                {membresia.duracionDias} días
+                                                                {formatearDuracion(membresia)}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -505,11 +516,10 @@ const handleEliminarMembresia = async (id: number) => {
                                         required
                                         min="1"
                                         value={formDataMembresia.duracionValor}
-                                        onChange={(e) => setFormDataMembresia({ 
-                                            ...formDataMembresia, 
-                                            duracionValor: Number(e.target.value),
-                                            duracionDias: calcularDias(Number(e.target.value), formDataMembresia.duracionTipo)
-                                        })}
+                                        onChange={(e) => setFormDataMembresia(prev => ({
+                                            ...prev,
+                                            duracionValor: Number(e.target.value)
+                                        }))}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="1"
                                     />
@@ -517,16 +527,15 @@ const handleEliminarMembresia = async (id: number) => {
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Tipo
+                                        Tipo de duración
                                     </label>
                                     <select
                                         required
                                         value={formDataMembresia.duracionTipo}
-                                        onChange={(e) => setFormDataMembresia({ 
-                                            ...formDataMembresia, 
-                                            duracionTipo: e.target.value,
-                                            duracionDias: calcularDias(formDataMembresia.duracionValor, e.target.value)
-                                        })}
+                                        onChange={(e) => setFormDataMembresia(prev => ({
+                                            ...prev,
+                                            duracionTipo: e.target.value
+                                        }))}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="dias">Días</option>
@@ -535,9 +544,12 @@ const handleEliminarMembresia = async (id: number) => {
                                     </select>
                                 </div>
                             </div>
-                            <p className="mt-1 text-xs text-gray-500">
-                                Equivalente a {formDataMembresia.duracionDias} días
-                            </p>
+                            
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                                <p className="text-sm text-gray-600">
+                                    <strong>Duración total:</strong> {calcularDuracionEnDias(formDataMembresia.duracionValor, formDataMembresia.duracionTipo)} días
+                                </p>
+                            </div>
 
                             {/* Botones de acción */}
                             <div className="flex gap-3 pt-4">

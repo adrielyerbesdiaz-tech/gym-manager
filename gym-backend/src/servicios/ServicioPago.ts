@@ -16,8 +16,6 @@ export class ServicioPago {
         if (monto <= 0) {
             throw new Error('El monto del pago debe ser positivo.');
         }
-        
-        // Nota: En una aplicación real, se debería verificar que la membresíaID exista.
 
         const nuevoPago = new pago(membresiaID, monto);
         

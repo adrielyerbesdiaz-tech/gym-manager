@@ -1,5 +1,5 @@
-import { ApiBase } from '../base/ApiBase';
-import { transformTipoMembresiaFromBackend } from '../base/Transformadores';
+import { ApiBase } from '../ApiBase';
+import { transformTipoMembresiaFromBackend } from '../Transformadores';
 
 export class TipoMembresiaApi {
   static async crearTipoMembresia(tipoMembresiaData: any): Promise<{ id: number }> {
@@ -22,6 +22,16 @@ export class TipoMembresiaApi {
 
   static async obtenerTiposMembresia(): Promise<any[]> {
     const data = await ApiBase.get('/tipos-membresia');
+    return data.map(transformTipoMembresiaFromBackend);
+  }
+
+  static async obtenerTipoMembresiaPorId(id: number): Promise<any> {
+    const data = await ApiBase.get(`/tipos-membresia/${id}`);
+    return transformTipoMembresiaFromBackend(data);
+  }
+
+  static async buscarTiposMembresia(criterio: string): Promise<any[]> {
+    const data = await ApiBase.get(`/tipos-membresia/buscar/${encodeURIComponent(criterio)}`);
     return data.map(transformTipoMembresiaFromBackend);
   }
 
