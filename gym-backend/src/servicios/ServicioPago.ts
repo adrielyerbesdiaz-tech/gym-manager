@@ -1,4 +1,4 @@
-import { pago } from '../entidades/Pago';
+import { pago } from '../entidades/Pagoa';
 import { GestorPago } from '../gestores/GestorPago';
 
 export class ServicioPago {

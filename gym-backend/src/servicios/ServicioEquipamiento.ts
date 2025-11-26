@@ -1,4 +1,4 @@
-import { equipamiento } from '../entidades/Equipamiento';
+import { equipamiento } from '../entidades/Equipamientoa';
 import { GestorEquipamiento } from '../gestores/GestorEquipamiento';
 
 export class ServicioEquipamiento {

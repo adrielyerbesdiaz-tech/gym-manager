@@ -1,4 +1,4 @@
-import { cliente } from '../entidades/Cliente';
+import { cliente } from '../entidades/Clientea';
 import { GestorCliente } from '../gestores/GestorCliente';
 
 export class ServicioCliente {
