@@ -1,4 +1,0 @@
-1 = funciono correctamente
-
-Error -1 = valor invalido
-Error -2 = 

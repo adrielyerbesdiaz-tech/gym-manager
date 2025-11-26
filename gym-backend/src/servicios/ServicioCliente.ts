@@ -1,4 +1,4 @@
-import { cliente } from '../entidades/cliente';
+import { cliente } from '../entidades/Cliente';
 import { GestorCliente } from '../gestores/GestorCliente';
 
 export class ServicioCliente {
@@ -68,7 +68,7 @@ export class ServicioCliente {
         
         // Verificar que no exista otro cliente con ese teléfono
         const clienteConTelefono = this.gestorCliente.buscarPorTelefono(telefonoNumero);
-        if (clienteConTelefono && clienteConTelefono.getId() !== id) {
+        if (clienteConTelefono && clienteConTelefono.getClienteId() !== id) {
             throw new Error('El teléfono ya está en uso por otro cliente.');
         }
         
@@ -85,12 +85,6 @@ export class ServicioCliente {
         if (!cliente) {
             throw new Error('Cliente no encontrado.');
         }
-        
-        // TODO: Agregar cuando tengas ServicioMembresia
-        // const tieneMembresia = this.gestorMembresia.tieneActiva(id);
-        // if (tieneMembresia) {
-        //     throw new Error('No se puede eliminar: el cliente tiene una membresía activa.');
-        // }
         
         const eliminado = this.gestorCliente.eliminar(id);
         
