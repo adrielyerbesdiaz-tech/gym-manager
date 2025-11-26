@@ -1,194 +1,275 @@
-import { useState, useEffect, useCallback } from 'react';
-import AsistenciaPagina from './pages/AsistenciaPagina';
-import ClientesPagina from './pages/ClientesPagina';
-import ConfiguracionesPagina from './pages/ConfiguracionesPagina';
-import LoginPagina from './pages/LoginPagina';
-import { LogOut, Dumbbell, Users, Settings } from 'lucide-react';
+import { useState } from 'react';
+import AsistenciaPagina from './pages/asistencias/AsistenciaPagina';
+import ClientesPagina from './pages/clientes/ClientesPagina';
+import EquipamientoPagina from './pages/equipamiento/EquipamientoPagina';
+import FinanzasPagina from './pages/finanzas/FinanzasPagina';
+import ConfiguracionesPagina from './pages/configuraciones/ConfiguracionesPagina';
+import LoginPagina from './pages/login/LoginPagina';
+import { LogOut } from 'lucide-react';
 import type { IAsistencia } from './models/IAsistencia';
 import type { IMembresia } from './models/IMembresia';
 import type { ITipoMembresia } from './models/ITipoMembresia';
 import type { ICliente } from './models/ICliente';
-import { AsistenciaApi } from './api/asistencias/ApiAsistencia';
+import type { IEquipamiento } from './models/IEquipamiento';
+import type { IEquipoAccesorio } from './models/IEquipoAccesorio';
+import type { IMantenimiento } from './models/IMantenimiento';
+import type { IPago } from './models/IPago';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [paginaActual, setPaginaActual] = useState<'asistencias' | 'clientes' | 'configuraciones'>('asistencias');
-  
-  const [loadingError, setLoadingError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [paginaActual, setPaginaActual] = useState<'asistencias' | 'clientes' | 'equipamiento' | 'finanzas' | 'configuraciones'>('asistencias');
 
-  // Estados globales
-  const [clientes, setClientes] = useState<ICliente[]>([]);
-  const [asistencias, setAsistencias] = useState<IAsistencia[]>([]);
-  const [membresias, setMembresias] = useState<IMembresia[]>([]);
-  const [tiposMembresia, setTiposMembresia] = useState<ITipoMembresia[]>([]);
-  
-  // ==================== LÓGICA DE NAVEGACIÓN Y AUTENTICACIÓN ====================
-  const handleLoginClick = () => setShowLogin(true);
-  const handleCancelLogin = () => setShowLogin(false);
+  // Estado de contraseña (hardcoded para demo)
+  const [currentPassword, setCurrentPassword] = useState('admin123');
+
+  // Estado global para clientes
+  const [clientes, setClientes] = useState<ICliente[]>([
+    {
+      id: 1,
+      nombreCompleto: 'Juan Pérez',
+      telefono: '9999026122',
+      idTipoMembresia: 1,
+      fechaRegistro: '2024-01-15',
+      notas: 'Cliente regular, prefiere turno matutino'
+    },
+    {
+      id: 2,
+      nombreCompleto: 'María González',
+      telefono: '9991234567',
+      idTipoMembresia: 2,
+      fechaRegistro: '2024-02-20',
+      notas: 'Pago pendiente de mensualidad'
+    }
+  ]);
+
+  // Tipos de membresía (ahora editable)
+  const [tiposMembresia, setTiposMembresia] = useState<ITipoMembresia[]>([
+    { tipoMembresiaId: 1, nombre: 'Mensual', duracionDias: 30, precio: 500 },
+    { tipoMembresiaId: 2, nombre: 'Trimestral', duracionDias: 90, precio: 1350 },
+    { tipoMembresiaId: 3, nombre: 'Semestral', duracionDias: 180, precio: 2500 },
+    { tipoMembresiaId: 4, nombre: 'Anual', duracionDias: 365, precio: 4500 }
+  ]);
+
+  // Membresías
+  const [membresias, setMembresias] = useState<IMembresia[]>([
+    {
+      membresiaId: 1,
+      tipoMembresiaId: 1,
+      clienteId: 1,
+      fechaInicio: '2024-11-01',
+      tipoMembresia: tiposMembresia[0],
+      cliente: clientes[0],
+      estado: 'Activa'
+    },
+    {
+      membresiaId: 2,
+      tipoMembresiaId: 2,
+      clienteId: 2,
+      fechaInicio: '2024-10-15',
+      tipoMembresia: tiposMembresia[1],
+      cliente: clientes[1],
+      estado: 'Vencida'
+    }
+  ]);
+
+  // Asistencias
+  const [asistencias, setAsistencias] = useState<IAsistencia[]>([
+    { asistenciaId: 1, membresiaId: 1, fechaCheckIn: '2024-11-20T08:30:00' },
+    { asistenciaId: 2, membresiaId: 1, fechaCheckIn: '2024-11-21T09:15:00' },
+    { asistenciaId: 3, membresiaId: 2, fechaCheckIn: '2024-11-22T10:00:00' }
+  ]);
+
+  // Equipamiento
+  const [equipamiento, setEquipamiento] = useState<IEquipamiento[]>([
+    {
+      equipoId: 1,
+      nombre: 'Barra Olímpica 20kg',
+      tipo: 'Pesas libres',
+      imagenUrl: '',
+      descripcion: 'Barra olímpica estándar de 20kg para levantamiento de pesas'
+    },
+    {
+      equipoId: 2,
+      nombre: 'Caminadora Profesional',
+      tipo: 'Cardio',
+      imagenUrl: '',
+      descripcion: 'Caminadora con velocidad variable y monitor de ritmo cardíaco'
+    }
+  ]);
+
+  // Accesorios
+  const [accesorios, setAccesorios] = useState<IEquipoAccesorio[]>([
+    {
+      accesorioId: 1,
+      nombre: 'Mancuernas 5kg',
+      cantidad: '10 pares',
+      notas: 'En buen estado'
+    },
+    {
+      accesorioId: 2,
+      nombre: 'Bandas de resistencia',
+      cantidad: '15 unidades',
+      notas: 'Diferentes niveles de resistencia'
+    }
+  ]);
+
+  // Mantenimientos
+  const [mantenimientos, setMantenimientos] = useState<IMantenimiento[]>([
+    {
+      mantenimientoId: 1,
+      equipoId: 1,
+      descripcion: 'Lubricación de rodamientos y ajuste general',
+      fechaInicio: '2024-11-01',
+      fechaFin: '2024-11-01',
+      costo: 150.00
+    },
+    {
+      mantenimientoId: 2,
+      equipoId: 2,
+      descripcion: 'Revisión de motor y calibración de sensores',
+      fechaInicio: '2024-11-15',
+      fechaFin: null,
+      costo: 300.00
+    }
+  ]);
+
+  // Pagos (Ingresos)
+  const [pagos, setPagos] = useState<IPago[]>([
+    {
+      pagoId: 1,
+      membresiaId: 1,
+      monto: 500.00,
+      fechaPago: '2024-11-05'
+    },
+    {
+      pagoId: 2,
+      membresiaId: 2,
+      monto: 1350.00,
+      fechaPago: '2024-10-20'
+    },
+    {
+      pagoId: 3,
+      membresiaId: 1,
+      monto: 500.00,
+      fechaPago: '2024-12-01'
+    }
+  ]);
+
+  const handleLogin = (username: string, password: string): boolean => {
+    // Validación hardcoded para demo
+    if (username === 'admin' && password === currentPassword) {
+      setIsAuthenticated(true);
+      setShowLogin(false);
+      setPaginaActual('clientes'); // Ir directamente a clientes después del login
+      return true;
+    }
+    return false;
+  };
+
   const handleLogout = () => {
     setIsAuthenticated(false);
     setPaginaActual('asistencias');
   };
 
-  const handleLogin = (username: string, password: string): boolean => {
-    if (username === 'admin' && password === 'admin123') {
-      setIsAuthenticated(true);
-      setShowLogin(false);
-      setPaginaActual('clientes');
+  const handleLoginClick = () => {
+    setShowLogin(true);
+  };
+
+  const handleCancelLogin = () => {
+    setShowLogin(false);
+  };
+
+  // Handler para registrar asistencia
+  const handleRegisterAttendance = (clienteName: string) => {
+    // Buscar cliente por nombre
+    const cliente = clientes.find(c => c.nombreCompleto.toLowerCase() === clienteName.toLowerCase());
+    if (!cliente) return;
+
+    // Buscar membresía activa del cliente
+    const membresia = membresias.find(m => m.clienteId === cliente.id && m.estado === 'Activa');
+    if (!membresia) return;
+
+    // Crear nuevo registro de asistencia
+    const nuevaAsistencia: IAsistencia = {
+      asistenciaId: Date.now(),
+      membresiaId: membresia.membresiaId,
+      fechaCheckIn: new Date().toISOString()
+    };
+
+    setAsistencias([nuevaAsistencia, ...asistencias]);
+  };
+
+  // Handler para cambiar contraseña
+  const handlePasswordChange = (oldPassword: string, newPassword: string): boolean => {
+    if (oldPassword === currentPassword) {
+      setCurrentPassword(newPassword);
       return true;
     }
     return false;
   };
-  
-  // Función para registrar asistencia desde AsistenciaPagina
-  const handleRegisterAttendance = async (clienteId: number, clienteName: string): Promise<boolean> => {
-    try {
-      // Verificar si ya registró hoy
-      const yaRegistro = await ClienteApi.verificarAsistenciaHoy(clienteId);
-      
-      if (yaRegistro) {
-        alert(`${clienteName} ya registró su asistencia hoy.`);
-        return false;
-      }
 
-      // Registrar asistencia
-      await ClienteApi.registrarAsistencia(clienteId);
-      return true;
-    } catch (error) {
-      console.error('Error registrando asistencia:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-      return false;
-    }
-  };
-
-  // ==================== LÓGICA DE CARGA DE DATOS ====================
-  const cargarDatosIniciales = useCallback(async () => {
-    setLoadingError(null);
-    setIsLoading(true);
-    
-    try {
-      console.log('Iniciando carga de datos...');
-      
-      const [clientesData, tiposMembresiaData] = await Promise.all([
-        ClienteApi.obtenerClientes(),
-        ClienteApi.obtenerTiposMembresia()
-      ]);
-      
-      console.log('Clientes cargados:', clientesData.length);
-      console.log('Tipos de membresía cargados:', tiposMembresiaData.length);
-      
-      setClientes(clientesData);
-      setTiposMembresia(tiposMembresiaData);
-      
-      // Mantener asistencias y membresías vacías por ahora
-      setAsistencias([]); 
-      setMembresias([]);
-
-    } catch (error) {
-      console.error('Error cargando datos iniciales:', error);
-      setLoadingError(
-        `No se pudieron cargar los datos: ${error instanceof Error ? error.message : String(error)}`
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    cargarDatosIniciales();
-  }, [cargarDatosIniciales]);
-
-  // ==================== RENDERIZADO ====================
-  
-  // Pantalla de error de conexión
-  if (loadingError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-        <div className="text-center p-8 bg-white border-2 border-red-200 rounded-lg shadow-xl max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">⚠️</span>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Error de Conexión</h2>
-          <p className="text-gray-600 mb-4">{loadingError}</p>
-          <p className="text-sm text-gray-500 mb-6">
-            Asegúrate de que el servidor backend esté corriendo en http://localhost:5000
-          </p>
-          <button
-            onClick={cargarDatosIniciales}
-            className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
-          >
-            Reintentar Conexión
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Pantalla de carga
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Dumbbell className="w-16 h-16 text-red-500 animate-bounce mx-auto mb-4" />
-          <p className="text-gray-600 font-medium">Cargando datos...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Pantalla de login
+  // Si está mostrando el login, renderizar LoginPagina
   if (showLogin) {
     return <LoginPagina onLogin={handleLogin} onCancel={handleCancelLogin} />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
+    <div>
+      {/* Navigation Bar - Solo visible si está autenticado */}
       {isAuthenticated && (
-        <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center space-x-4">
-                <Dumbbell className="w-6 h-6 text-red-600" />
-                <span className="text-xl font-bold text-gray-900">Gym Manager</span>
-
+        <nav className="bg-white shadow-md border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-8">
                 <button
                   onClick={() => setPaginaActual('asistencias')}
-                  className={`flex items-center gap-2 py-2 px-3 border-b-2 font-medium text-sm transition-colors ${
-                    paginaActual === 'asistencias'
-                      ? 'border-red-500 text-red-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'asistencias'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
                 >
-                  <Dumbbell className="w-4 h-4" />
                   Asistencias
                 </button>
                 <button
                   onClick={() => setPaginaActual('clientes')}
-                  className={`flex items-center gap-2 py-2 px-3 border-b-2 font-medium text-sm transition-colors ${
-                    paginaActual === 'clientes'
-                      ? 'border-red-500 text-red-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'clientes'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
                 >
-                  <Users className="w-4 h-4" />
                   Clientes
                 </button>
                 <button
-                  onClick={() => setPaginaActual('configuraciones')}
-                  className={`flex items-center gap-2 py-2 px-3 border-b-2 font-medium text-sm transition-colors ${
-                    paginaActual === 'configuraciones'
-                      ? 'border-red-500 text-red-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                  }`}
+                  onClick={() => setPaginaActual('equipamiento')}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'equipamiento'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
                 >
-                  <Settings className="w-4 h-4" />
+                  Equipamiento
+                </button>
+                <button
+                  onClick={() => setPaginaActual('finanzas')}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'finanzas'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                >
+                  Finanzas
+                </button>
+                <button
+                  onClick={() => setPaginaActual('configuraciones')}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm transition-colors ${paginaActual === 'configuraciones'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }`}
+                >
                   Configuraciones
                 </button>
               </div>
 
+              {/* Botón de logout */}
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors py-2 px-3 rounded-lg hover:bg-gray-50"
@@ -202,36 +283,54 @@ function App() {
       )}
 
       {/* Page Content */}
-      <main className="max-w-7xl mx-auto sm:px-6 lg:px-8 py-6">
-        {isAuthenticated ? (
-          paginaActual === 'asistencias' ? (
-            <AsistenciaPagina
-              onLoginClick={handleLoginClick}
-              onRegisterAttendance={handleRegisterAttendance}
-            />
-          ) : paginaActual === 'clientes' ? (
-            <ClientesPagina
-              clientes={clientes}
-              setClientes={setClientes}
-              asistencias={asistencias}
-              membresias={membresias}
-              setMembresias={setMembresias}
-              tiposMembresia={tiposMembresia}
-              onRecargarClientes={cargarDatosIniciales}
-            />
-          ) : (
-            <ConfiguracionesPagina
-              tiposMembresia={tiposMembresia}
-              setTiposMembresia={setTiposMembresia}
-            />
-          )
-        ) : (
+      {isAuthenticated ? (
+        paginaActual === 'asistencias' ? (
           <AsistenciaPagina
             onLoginClick={handleLoginClick}
             onRegisterAttendance={handleRegisterAttendance}
           />
-        )}
-      </main>
+        ) : paginaActual === 'clientes' ? (
+          <ClientesPagina
+            clientes={clientes}
+            setClientes={setClientes}
+            asistencias={asistencias}
+            membresias={membresias}
+            setMembresias={setMembresias}
+            tiposMembresia={tiposMembresia}
+            pagos={pagos}
+            setPagos={setPagos}
+          />
+        ) : paginaActual === 'equipamiento' ? (
+          <EquipamientoPagina
+            equipamiento={equipamiento}
+            setEquipamiento={setEquipamiento}
+            accesorios={accesorios}
+            setAccesorios={setAccesorios}
+            mantenimientos={mantenimientos}
+            setMantenimientos={setMantenimientos}
+          />
+        ) : paginaActual === 'finanzas' ? (
+          <FinanzasPagina
+            pagos={pagos}
+            setPagos={setPagos}
+            mantenimientos={mantenimientos}
+            membresias={membresias}
+            equipamiento={equipamiento}
+            clientes={clientes}
+          />
+        ) : (
+          <ConfiguracionesPagina
+            tiposMembresia={tiposMembresia}
+            setTiposMembresia={setTiposMembresia}
+            onPasswordChange={handlePasswordChange}
+          />
+        )
+      ) : (
+        <AsistenciaPagina
+          onLoginClick={handleLoginClick}
+          onRegisterAttendance={handleRegisterAttendance}
+        />
+      )}
     </div>
   );
 }

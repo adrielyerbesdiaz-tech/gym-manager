@@ -1,13 +1,12 @@
 
 export class asistencia{
-    private asistenciaId: number;
-    private clienteID: number;
-    private fechaCheckIn: Date;
+    private readonly asistenciaId: number;
+    private readonly clienteID: number;
+    private readonly fechaCheckIn: Date;
 
-    // Opción: Agregar constructor con todos los parámetros
-    constructor(clienteID: number, asistenciaId?: number, fechaCheckIn?: Date) {
-        this.asistenciaId = asistenciaId || 0;
-        this.fechaCheckIn = fechaCheckIn || new Date();
+    constructor(clienteID: number){
+        this.asistenciaId = 0;
+        this.fechaCheckIn = new Date();
         this.clienteID = clienteID;
     }
 

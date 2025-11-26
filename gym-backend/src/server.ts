@@ -1,30 +1,8 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import Database from 'better-sqlite3';
-
-// Importar gestores y servicios
 import { GestorCliente } from './gestores/GestorCliente';
-import { GestorAsistencia } from './gestores/GestorAsistencia';
-import { GestorEquipamiento } from './gestores/GestorEquipamiento';
-import { GestorTipoMembresia } from './gestores/GestorTipoMembresia';
-import { GestorMantenimiento } from './gestores/GestorMantenimiento';
-import { GestorMembresia } from './gestores/GestorMembresia';
-import { GestorUsuario } from './gestores/GestorUsuario';
-import { GestorEquipamientoAccesorio } from './gestores/GestorEquipamientoAccesorio';
-import { GestorPago } from './gestores/GestorPago';
-
 import { ServicioCliente } from './servicios/ServicioCliente';
-import { ServicioAsistencia } from './servicios/ServicioAsistencia';
-import { ServicioTipoMembresia } from './servicios/ServicioTipoMembresia';
-import { ServicioEquipamiento } from './servicios/ServicioEquipamiento';
-import { ServicioMantenimiento } from './servicios/ServicioMantenimiento';
-import { ServicioMembresia } from './servicios/ServicioMembresia';
-import { ServicioUsuario } from './servicios/ServicioUsuario';
-import { ServicioEquipamientoAccesorio } from './servicios/ServicioEquipamientoAccesorio';
-import { ServicioPago } from './servicios/ServicioPago';
-
-// Importar configuración de rutas
-import { configurarRutas, DependenciasServicios } from './rutas';
 
 const app = express();
 app.use(cors());
@@ -33,39 +11,131 @@ app.use(express.json());
 // Database connection
 const db = new Database('gym.db');
 
-// Inicializar gestores
+// Inicializar gestor y servicio
 const gestorCliente = new GestorCliente(db);
-const gestorEquipamiento = new GestorEquipamiento(db);
-const gestorAsistencia = new GestorAsistencia(db);
-const gestorTipoMembresia = new GestorTipoMembresia(db);
-const gestorMantenimiento = new GestorMantenimiento(db);
-const gestorMembresia = new GestorMembresia(db);
-const gestorUsuario = new GestorUsuario(db);
-const gestorEquipamientoAccesorio = new GestorEquipamientoAccesorio(db);
-const gestorPago = new GestorPago(db);
+const servicioCliente = new ServicioCliente(gestorCliente);
 
-// Inicializar servicios
-const servicios: DependenciasServicios = {
-    servicioCliente: new ServicioCliente(gestorCliente),
-    servicioEquipamiento: new ServicioEquipamiento(gestorEquipamiento),
-    servicioAsistencia: new ServicioAsistencia(gestorAsistencia, gestorCliente),
-    servicioMantenimiento: new ServicioMantenimiento(gestorMantenimiento),
-    servicioTipoMembresia: new ServicioTipoMembresia(gestorTipoMembresia),
-    servicioMembresia: new ServicioMembresia(gestorMembresia, gestorTipoMembresia),
-    servicioUsuario: new ServicioUsuario(gestorUsuario),
-    servicioEquipamientoAccesorio: new ServicioEquipamientoAccesorio(gestorEquipamientoAccesorio),
-    servicioPago: new ServicioPago(gestorPago)
-};
+// Crear nuevo cliente
+app.post('/api/clientes', (req: Request, res: Response) => {
+    try {
+        const id = servicioCliente.crear(
+            req.body.nombre,
+            req.body.telefono,
+            req.body.notas
+        );
+        res.json({ success: true, id });
+    } catch (error) {
+        res.status(400).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
 
-// Configurar todas las rutas
-app.use('/api', configurarRutas(servicios));
+// Obtener todos los clientes
+app.get('/api/clientes', (req: Request, res: Response) => {
+    try {
+        const clientes = servicioCliente.obtenerTodos();
+        res.json(clientes);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Buscar clientes (por ID, nombre o teléfono)
+app.get('/api/clientes/buscar/:criterio', (req: Request, res: Response) => {
+    try {
+        const criterio = isNaN(Number(req.params.criterio)) 
+            ? req.params.criterio 
+            : Number(req.params.criterio);
+        
+        const resultados = servicioCliente.buscar(criterio);
+        res.json(resultados);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Buscar cliente por ID específico
+app.get('/api/clientes/:id', (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        const resultados = servicioCliente.buscar(id);
+        
+        if (resultados.length === 0) {
+            res.status(404).json({ 
+                success: false, 
+                error: 'Cliente no encontrado' 
+            });
+            return;
+        }
+        
+        res.json(resultados[0]);
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Actualizar notas del cliente
+app.patch('/api/clientes/:id/notas', (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        servicioCliente.actualizarNotas(id, req.body.notas);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Actualizar teléfono del cliente
+app.patch('/api/clientes/:id/telefono', (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        servicioCliente.actualizarTelefono(id, req.body.telefono);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+// Eliminar cliente
+app.delete('/api/clientes/:id', (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        servicioCliente.eliminar(id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(400).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Error desconocido' 
+        });
+    }
+});
+
+
+
 
 // Test route
-app.get('/api/test', (req, res) => {
-    const result = db.prepare('SELECT * FROM Clientes').get();
-    res.json(result);
+app.get('/api/test', (req: Request, res: Response) => {
+  const result = db.prepare('SELECT * FROM Clientes').get();
+  res.json(result);
 });
 
 app.listen(5000, () => {
-    console.log('Server running on port 5000');
+  console.log('Server running on port 5000');
 });
