@@ -14,7 +14,8 @@ export interface Cliente {
   nombreCompleto: string;
   telefono: number;
   notas: string;
-  fechaRegistro: string | Date; // Ajustado para compatibilidad
+  fechaRegistro: string | Date;
+  idTipoMembresia?: number; // Agregado para compatibilidad con datos iniciales
 }
 
 export interface TipoMembresia {
@@ -28,9 +29,8 @@ export interface Membresia {
   membresiaId: number;
   tipoMembresiaID: number;
   usuarioID: number;
-  fechaInicio: string | Date; // Ajustado
+  fechaInicio: string | Date;
   estado: 'Activa' | 'Vencida';
-  // Propiedades opcionales para facilitar uniones en vistas
   tipoMembresia?: TipoMembresia;
   cliente?: Cliente;
 }
@@ -38,8 +38,7 @@ export interface Membresia {
 export interface Asistencia {
   asistenciaId: number;
   clienteID: number;
-  fechaCheckIn: string | Date; // Ajustado
-  // Propiedades opcionales para vistas
+  fechaCheckIn: string | Date;
   cliente?: Cliente;
   membresia?: Membresia;
   tipoMembresia?: TipoMembresia;
@@ -49,7 +48,7 @@ export interface Equipamiento {
   equipoId: number;
   nombre: string;
   tipo: string;
-  imagenUrl?: string; // Opcional para compatibilidad
+  imagenUrl?: string;
   descripcion: string;
 }
 
@@ -64,18 +63,18 @@ export interface Mantenimiento {
   mantenimientoId: number;
   equipoID: number;
   descripcion: string;
-  fechaInicio: string | Date; // Ajustado
-  fechaFin: string | Date | null; // Ajustado
+  fechaInicio: string | Date;
+  fechaFin: string | Date | null;
   costo: number;
   equipo?: Equipamiento;
-  enCurso?: boolean; // Añadido para compatibilidad con la vista de Mantenimiento
+  enCurso?: boolean;
 }
 
 export interface Pago {
   pagoId: number;
   membresiaID: number;
   monto: number;
-  fechaPago: string | Date; // Ajustado
+  fechaPago: string | Date;
   membresia?: Membresia;
   cliente?: Cliente;
 }
@@ -94,6 +93,7 @@ function App() {
       Id: 1,
       nombreCompleto: 'Juan Pérez',
       telefono: 9999026122,
+      idTipoMembresia: 1,
       fechaRegistro: '2024-01-15',
       notas: 'Cliente regular, prefiere turno matutino'
     },
@@ -101,6 +101,7 @@ function App() {
       Id: 2,
       nombreCompleto: 'María González',
       telefono: 9991234567,
+      idTipoMembresia: 2,
       fechaRegistro: '2024-02-20',
       notas: 'Pago pendiente de mensualidad'
     }
@@ -218,11 +219,10 @@ function App() {
   ]);
 
   const handleLogin = (nombreUsuario: string, contrasenia: string): boolean => {
-    // Validación hardcoded para demo
     if (nombreUsuario === 'admin' && contrasenia === currentPassword) {
       setIsAuthenticated(true);
       setShowLogin(false);
-      setPaginaActual('clientes'); // Ir directamente a clientes después del login
+      setPaginaActual('clientes');
       return true;
     }
     return false;
@@ -241,7 +241,6 @@ function App() {
     setShowLogin(false);
   };
 
-  // Handler para registrar asistencia
   const handleRegisterAttendance = (nombreCompleto: string) => {
     const cliente = clientes.find(c => c.nombreCompleto.toLowerCase() === nombreCompleto.toLowerCase());
     if (!cliente) {
@@ -256,10 +255,8 @@ function App() {
     };
 
     setAsistencias([nuevaAsistencia, ...asistencias]);
-    // En una app real, aquí mostraríamos un toast o mensaje de éxito
   };
 
-  // Handler para cambiar contraseña
   const handlePasswordChange = (oldPassword: string, newPassword: string): boolean => {
     if (oldPassword === currentPassword) {
       setCurrentPassword(newPassword);
@@ -274,7 +271,6 @@ function App() {
 
   return (
     <div>
-      {/* Navigation Bar - Solo visible si está autenticado */}
       {isAuthenticated && (
         <nav className="bg-white shadow-md border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4">
@@ -327,7 +323,6 @@ function App() {
                 </button>
               </div>
 
-              {/* Botón de logout */}
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors py-2 px-3 rounded-lg hover:bg-gray-50 ml-4"
@@ -345,46 +340,42 @@ function App() {
         <div className="p-4">
           {paginaActual === 'asistencias' ? (
             <AsistenciaPagina
-              onLoginClick={undefined} // Ya logueado, no mostramos botón login
+              onLoginClick={undefined}
               onRegistrarAsistencia={handleRegisterAttendance}
             />
           ) : paginaActual === 'clientes' ? (
-            // @ts-ignore
             <ClientesPagina
-              clientes={clientes}
-              setClientes={setClientes}
-              asistencias={asistencias}
-              membresias={membresias}
-              setMembresias={setMembresias}
-              tiposMembresia={tiposMembresia}
-              pagos={pagos}
-              setPagos={setPagos}
+              clientes={clientes as any}
+              setClientes={setClientes as any}
+              asistencias={asistencias as any}
+              membresias={membresias as any}
+              setMembresias={setMembresias as any}
+              tiposMembresia={tiposMembresia as any}
+              pagos={pagos as any}
+              setPagos={setPagos as any}
             />
           ) : paginaActual === 'equipamiento' ? (
-            // @ts-ignore
             <EquipamientoPagina
-              equipamiento={equipamiento}
-              setEquipamiento={setEquipamiento}
-              accesorios={accesorios}
-              setAccesorios={setAccesorios}
-              mantenimientos={mantenimientos}
-              setMantenimientos={setMantenimientos}
+              equipamiento={equipamiento as any}
+              setEquipamiento={setEquipamiento as any}
+              accesorios={accesorios as any}
+              setAccesorios={setAccesorios as any}
+              mantenimientos={mantenimientos as any}
+              setMantenimientos={setMantenimientos as any}
             />
           ) : paginaActual === 'finanzas' ? (
-            // @ts-ignore
             <FinanzasPagina
-              pagos={pagos}
-              setPagos={setPagos}
-              mantenimientos={mantenimientos}
-              membresias={membresias}
-              equipamiento={equipamiento}
-              clientes={clientes}
+              pagos={pagos as any}
+              setPagos={setPagos as any}
+              mantenimientos={mantenimientos as any}
+              membresias={membresias as any}
+              equipamiento={equipamiento as any}
+              clientes={clientes as any}
             />
           ) : (
-            // @ts-ignore
             <ConfiguracionesPagina
-              tiposMembresia={tiposMembresia}
-              setTiposMembresia={setTiposMembresia}
+              tiposMembresia={tiposMembresia as any}
+              setTiposMembresia={setTiposMembresia as any}
               onCambiarContrasenia={handlePasswordChange}
             />
           )}
