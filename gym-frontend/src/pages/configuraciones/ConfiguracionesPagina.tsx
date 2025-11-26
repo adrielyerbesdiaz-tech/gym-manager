@@ -1,7 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Settings, Edit2, Trash2, X, Check, Plus, DollarSign, Calendar, FileText, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import type { ITipoMembresia } from '../../models/ITipoMembresia';
-import { TipoMembresiaApi } from '../../api/membresias/ApiTipoMembresia';
+import { ApiTipoMembresia } from '../../api/membresias/ApiTipoMembresia';
 
 interface ConfiguracionesPaginaProps {
     tiposMembresia: ITipoMembresia[];
@@ -21,7 +21,7 @@ export default function ConfiguracionesPagina({
     const recargarTiposMembresia = async () => {
         setLoading(true);
         try {
-            const data = await TipoMembresiaApi.obtenerTiposMembresia();
+            const data = await ApiTipoMembresia.obtenerTiposMembresia();
             setTiposMembresia(data);
         } catch (error) {
             console.error('Error al recargar tipos de membresía:', error);
@@ -34,22 +34,22 @@ export default function ConfiguracionesPagina({
     // ==================== GESTIÓN DE MEMBRESÍAS ====================
     const [modalMembresiaOpen, setModalMembresiaOpen] = useState(false);
     const [editingMembresia, setEditingMembresia] = useState<ITipoMembresia | null>(null);
-    const [formDataMembresia, setFormDataMembresia] = useState<Omit<ITipoMembresia, 'tipoMembresiaId'>>({
+    const [formDataMembresia, setFormDataMembresia] = useState<Omit<ITipoMembresia, 'tipoMembresiaID'>>({
         nombre: '',
         duracionValor: 1,
-        duracionTipo: 'meses', 
-        duracionDias: 30,      
+        duracionTipo: 'meses',
+        duracionDias: 30,
         precio: 0
     });
 
     const handleNuevaMembresia = () => {
         setEditingMembresia(null);
-        setFormDataMembresia({ 
-            nombre: '', 
-            duracionValor: 1, 
-            duracionTipo: 'meses', 
-            duracionDias: 30, 
-            precio: 0 
+        setFormDataMembresia({
+            nombre: '',
+            duracionValor: 1,
+            duracionTipo: 'meses',
+            duracionDias: 30,
+            precio: 0
         });
         setModalMembresiaOpen(true);
     };
@@ -67,42 +67,42 @@ export default function ConfiguracionesPagina({
     };
 
     const handleGuardarMembresia = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-        if (editingMembresia) {
-            // ACTUALIZAR
-            await TipoMembresiaApi.actualizarTipoMembresia(editingMembresia.tipoMembresiaId, formDataMembresia);
-        } else {
-            // CREAR NUEVA
-            const { id } = await TipoMembresiaApi.crearTipoMembresia(formDataMembresia);
-            console.log(`Tipo de Membresía creado con ID: ${id}`);
-        }
-        // Recargar la lista desde el servidor después de la operación
-        await recargarTiposMembresia();
-        setModalMembresiaOpen(false);
-    } catch (error) {
-        alert(`Error al guardar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
-    } finally {
-        setLoading(false);
-    }
-};
-
-const handleEliminarMembresia = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de membresía?')) {
+        e.preventDefault();
         setLoading(true);
+
         try {
-            await TipoMembresiaApi.eliminarTipoMembresia(id);
-            // Recargar desde el servidor en lugar de actualizar localmente
+            if (editingMembresia) {
+                // ACTUALIZAR
+                await ApiTipoMembresia.actualizarTipoMembresia(editingMembresia.tipoMembresiaID, formDataMembresia);
+            } else {
+                // CREAR NUEVA
+                const { id } = await ApiTipoMembresia.crearTipoMembresia(formDataMembresia);
+                console.log(`Tipo de Membresía creado con ID: ${id}`);
+            }
+            // Recargar la lista desde el servidor después de la operación
             await recargarTiposMembresia();
+            setModalMembresiaOpen(false);
         } catch (error) {
-            alert(`Error al eliminar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            alert(`Error al guardar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
         } finally {
             setLoading(false);
         }
-    }
-};
+    };
+
+    const handleEliminarMembresia = async (id: number) => {
+        if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de membresía?')) {
+            setLoading(true);
+            try {
+                await ApiTipoMembresia.eliminarTipoMembresia(id);
+                // Recargar desde el servidor en lugar de actualizar localmente
+                await recargarTiposMembresia();
+            } catch (error) {
+                alert(`Error al eliminar tipo de membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
 
     // ==================== CAMBIO DE CONTRASEÑA ====================
     const [passwordData, setPasswordData] = useState({
@@ -155,7 +155,7 @@ const handleEliminarMembresia = async (id: number) => {
     };
 
     const calcularDias = (valor: number, tipo: string): number => {
-        switch(tipo) {
+        switch (tipo) {
             case 'dias':
                 return valor;
             case 'semanas':
@@ -175,7 +175,7 @@ const handleEliminarMembresia = async (id: number) => {
                     <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
                 </div>
             )}
-            
+
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
@@ -193,8 +193,8 @@ const handleEliminarMembresia = async (id: number) => {
                             <button
                                 onClick={() => setTabActual('membresias')}
                                 className={`py-4 px-6 font-medium text-sm transition-colors border-b-2 ${tabActual === 'membresias'
-                                        ? 'border-red-500 text-red-600'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                                    ? 'border-red-500 text-red-600'
+                                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                                     }`}
                             >
                                 <div className="flex items-center gap-2">
@@ -205,8 +205,8 @@ const handleEliminarMembresia = async (id: number) => {
                             <button
                                 onClick={() => setTabActual('password')}
                                 className={`py-4 px-6 font-medium text-sm transition-colors border-b-2 ${tabActual === 'password'
-                                        ? 'border-red-500 text-red-600'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                                    ? 'border-red-500 text-red-600'
+                                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                                     }`}
                             >
                                 <div className="flex items-center gap-2">
@@ -276,7 +276,7 @@ const handleEliminarMembresia = async (id: number) => {
                                                 </tr>
                                             ) : (
                                                 tiposMembresia.map((membresia) => (
-                                                    <tr key={membresia.tipoMembresiaId} className="hover:bg-gray-50 transition-colors group">
+                                                    <tr key={membresia.tipoMembresiaID} className="hover:bg-gray-50 transition-colors group">
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <div className="text-sm font-medium text-gray-900">
                                                                 {membresia.nombre}
@@ -302,7 +302,7 @@ const handleEliminarMembresia = async (id: number) => {
                                                                     <Edit2 className="w-4 h-4" />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => handleEliminarMembresia(membresia.tipoMembresiaId)}
+                                                                    onClick={() => handleEliminarMembresia(membresia.tipoMembresiaID)}
                                                                     className="text-red-600 hover:text-red-900 transition-colors p-1 rounded-md hover:bg-red-50"
                                                                     title="Eliminar"
                                                                 >
@@ -505,8 +505,8 @@ const handleEliminarMembresia = async (id: number) => {
                                         required
                                         min="1"
                                         value={formDataMembresia.duracionValor}
-                                        onChange={(e) => setFormDataMembresia({ 
-                                            ...formDataMembresia, 
+                                        onChange={(e) => setFormDataMembresia({
+                                            ...formDataMembresia,
                                             duracionValor: Number(e.target.value),
                                             duracionDias: calcularDias(Number(e.target.value), formDataMembresia.duracionTipo)
                                         })}
@@ -522,8 +522,8 @@ const handleEliminarMembresia = async (id: number) => {
                                     <select
                                         required
                                         value={formDataMembresia.duracionTipo}
-                                        onChange={(e) => setFormDataMembresia({ 
-                                            ...formDataMembresia, 
+                                        onChange={(e) => setFormDataMembresia({
+                                            ...formDataMembresia,
                                             duracionTipo: e.target.value,
                                             duracionDias: calcularDias(formDataMembresia.duracionValor, e.target.value)
                                         })}

@@ -5,6 +5,9 @@ import type { IAsistencia } from '../../models/IAsistencia';
 import type { IMembresia } from '../../models/IMembresia';
 import type { ITipoMembresia } from '../../models/ITipoMembresia';
 import type { IPago } from '../../models/IPago';
+import { ApiCliente } from '../../api/clientes/ApiCliente';
+import { ApiMembresia } from '../../api/membresias/ApiMembresia';
+import { ApiPago } from '../../api/pagos/ApiPago';
 
 interface ClientesPaginaProps {
     clientes: ICliente[];
@@ -13,18 +16,26 @@ interface ClientesPaginaProps {
     membresias: IMembresia[];
     setMembresias: Dispatch<SetStateAction<IMembresia[]>>;
     tiposMembresia: ITipoMembresia[];
-    pagos: IPago[];
-    setPagos: Dispatch<SetStateAction<IPago[]>>;
+    pagos?: IPago[];
+    setPagos?: Dispatch<SetStateAction<IPago[]>>;
 }
 
-export default function ClientesPagina({ clientes, setClientes, asistencias, membresias, setMembresias, tiposMembresia, pagos, setPagos }: ClientesPaginaProps) {
+export default function ClientesPagina({ clientes, setClientes, asistencias, membresias, setMembresias, tiposMembresia, pagos = [], setPagos }: ClientesPaginaProps) {
     const [tabActual, setTabActual] = useState<'clientes' | 'historial' | 'membresias'>('clientes');
+    const [loading, setLoading] = useState(false);
 
     // Estados para Clientes
     const [modalOpen, setModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<ICliente | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [formData, setFormData] = useState<Omit<ICliente, 'id' | 'fechaRegistro'>>({
+
+    // Form Data
+    const [formData, setFormData] = useState<{
+        nombreCompleto: string;
+        telefono: string;
+        idTipoMembresia: number;
+        notas: string;
+    }>({
         nombreCompleto: '',
         telefono: '',
         idTipoMembresia: 1,
@@ -45,86 +56,104 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
     // ==================== CLIENTES ====================
     const clientesFiltrados = clientes.filter(cliente =>
         cliente.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cliente.telefono.includes(searchTerm)
+        cliente.telefono.toString().includes(searchTerm)
     );
 
     const handleNuevoCliente = () => {
         setEditingClient(null);
-        setFormData({ nombreCompleto: '', telefono: '', idTipoMembresia: tiposMembresia[0]?.tipoMembresiaId || 1, notas: '' });
+        setFormData({ nombreCompleto: '', telefono: '', idTipoMembresia: tiposMembresia[0]?.tipoMembresiaID || 1, notas: '' });
         setModalOpen(true);
     };
 
     const handleEditarCliente = (cliente: ICliente) => {
         setEditingClient(cliente);
+        const membresia = membresias.find(m => m.usuarioID === cliente.Id);
+
         setFormData({
             nombreCompleto: cliente.nombreCompleto,
-            telefono: cliente.telefono,
-            idTipoMembresia: cliente.idTipoMembresia,
+            telefono: cliente.telefono.toString(),
+            idTipoMembresia: membresia ? membresia.tipoMembresiaID : (tiposMembresia[0]?.tipoMembresiaID || 1),
             notas: cliente.notas
         });
         setModalOpen(true);
     };
 
-    const handleGuardarCliente = (e: React.FormEvent) => {
+    const handleGuardarCliente = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
 
-        if (editingClient) {
-            // Al editar, solo actualizar el cliente
-            setClientes(clientes.map(c =>
-                c.id === editingClient.id
-                    ? { ...formData, id: editingClient.id, fechaRegistro: editingClient.fechaRegistro }
-                    : c
-            ));
-        } else {
-            // Al crear nuevo cliente, auto-crear membresía y pago
-            const clienteId = Date.now();
-            const membresiaId = clienteId + 1;
-            const pagoId = clienteId + 2;
+        try {
+            if (editingClient) {
+                // Actualizar cliente existente
+                const clienteActualizado = await ApiCliente.actualizarCliente(editingClient.Id, {
+                    nombreCompleto: formData.nombreCompleto,
+                    telefono: Number(formData.telefono),
+                    notas: formData.notas
+                });
 
-            const nuevoCliente: ICliente = {
-                ...formData,
-                id: clienteId,
-                fechaRegistro: new Date().toISOString().split('T')[0]
-            };
+                setClientes(clientes.map(c => c.Id === editingClient.Id ? clienteActualizado : c));
+            } else {
+                // Crear nuevo cliente
+                const nuevoCliente = await ApiCliente.crearCliente({
+                    nombreCompleto: formData.nombreCompleto,
+                    telefono: Number(formData.telefono),
+                    notas: formData.notas,
+                    fechaRegistro: new Date().toISOString().split('T')[0]
+                });
 
-            // Crear membresía automáticamente
-            const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaId === formData.idTipoMembresia);
-            const nuevaMembresia: IMembresia = {
-                membresiaId: membresiaId,
-                tipoMembresiaId: formData.idTipoMembresia,
-                clienteId: clienteId,
-                fechaInicio: new Date().toISOString().split('T')[0],
-                tipoMembresia: tipoMembresia,
-                cliente: nuevoCliente,
-                estado: 'Activa'
-            };
+                setClientes([...clientes, nuevoCliente]);
 
-            // Crear pago inicial automáticamente
-            const nuevoPago: IPago = {
-                pagoId: pagoId,
-                membresiaId: membresiaId,
-                monto: tipoMembresia?.precio || 0,
-                fechaPago: new Date().toISOString().split('T')[0]
-            };
+                // Crear membresía automática
+                const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaID === formData.idTipoMembresia);
+                if (tipoMembresia) {
+                    const fechaInicio = new Date();
+                    const fechaVencimiento = new Date(fechaInicio);
+                    fechaVencimiento.setDate(fechaVencimiento.getDate() + (tipoMembresia.duracionDias || 30));
 
-            setClientes([...clientes, nuevoCliente]);
-            setMembresias([...membresias, nuevaMembresia]);
-            setPagos([...pagos, nuevoPago]);
+                    const nuevaMembresia = await ApiMembresia.crearMembresia({
+                        usuarioID: nuevoCliente.Id,
+                        tipoMembresiaID: tipoMembresia.tipoMembresiaID,
+                        fechaInicio: fechaInicio.toISOString().split('T')[0],
+                        FechaVencimiento: fechaVencimiento.toISOString().split('T')[0],
+                        estado: 'Activa'
+                    });
+                    setMembresias([...membresias, nuevaMembresia]);
+
+                    // Crear pago inicial automático
+                    if (setPagos) {
+                        const nuevoPago = await ApiPago.crearPago({
+                            membresiaId: nuevaMembresia.membresiaId,
+                            monto: tipoMembresia.precio,
+                            fechaPago: new Date().toISOString().split('T')[0]
+                        });
+                        setPagos([...pagos, nuevoPago]);
+                    }
+                }
+            }
+            setModalOpen(false);
+        } catch (error) {
+            alert(`Error al guardar cliente: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setLoading(false);
         }
-        setModalOpen(false);
     };
 
-    const handleEliminarCliente = (id: number) => {
+    const handleEliminarCliente = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este cliente?')) {
-            setClientes(clientes.filter(c => c.id !== id));
+            try {
+                await ApiCliente.eliminarCliente(id);
+                setClientes(clientes.filter(c => c.Id !== id));
+            } catch (error) {
+                alert(`Error al eliminar cliente: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            }
         }
     };
 
     // ==================== HISTORIAL ====================
     const asistenciasConDetalles = asistencias.map(asistencia => {
-        const membresia = membresias.find(m => m.membresiaId === asistencia.membresiaId);
-        const cliente = membresia ? clientes.find(c => c.id === membresia.clienteId) : null;
-        const tipoMembresia = membresia ? tiposMembresia.find(t => t.tipoMembresiaId === membresia.tipoMembresiaId) : null;
+        const cliente = clientes.find(c => c.Id === asistencia.ID_Cliente);
+        const membresia = membresias.find(m => m.usuarioID === asistencia.ID_Cliente);
+        const tipoMembresia = membresia ? tiposMembresia.find(t => t.tipoMembresiaID === membresia.tipoMembresiaID) : null;
 
         return {
             ...asistencia,
@@ -135,7 +164,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
     });
 
     const asistenciasFiltradas = asistenciasConDetalles.filter(a => {
-        const fechaCheckIn = new Date(a.fechaCheckIn);
+        const fechaCheckIn = new Date(a.Fecha_Check_In);
         const cumpleFechaInicio = !fechaInicio || fechaCheckIn >= new Date(fechaInicio);
         const cumpleFechaFin = !fechaFin || fechaCheckIn <= new Date(fechaFin + 'T23:59:59');
         const cumpleNombre = !nombreFiltro || a.cliente?.nombreCompleto.toLowerCase().includes(nombreFiltro.toLowerCase());
@@ -146,52 +175,57 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
 
     // ==================== MEMBRESIAS ====================
     const membresiasConDetalles = membresias.map(membresia => {
-        const cliente = clientes.find(c => c.id === membresia.clienteId);
-        const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaId === membresia.tipoMembresiaId);
+        const cliente = clientes.find(c => c.Id === membresia.usuarioID);
+        const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaID === membresia.tipoMembresiaID);
 
-        // Calcular fecha de vencimiento
-        const fechaInicio = new Date(membresia.fechaInicio);
-        const duracionDias = tipoMembresia?.duracionDias || 30;
-        const fechaVencimiento = new Date(fechaInicio);
-        fechaVencimiento.setDate(fechaVencimiento.getDate() + duracionDias);
-
-        // Determinar estado
+        // Calcular estado si no viene del backend
         const hoy = new Date();
+        const fechaVencimiento = new Date(membresia.FechaVencimiento);
         const estado: 'Activa' | 'Vencida' = hoy <= fechaVencimiento ? 'Activa' : 'Vencida';
 
         return {
             ...membresia,
             cliente,
             tipoMembresia,
-            fechaVencimiento: fechaVencimiento.toISOString().split('T')[0],
-            estado
+            estado: membresia.estado || estado
         };
     });
 
     const handleRenovar = (membresia: IMembresia) => {
         setMembresiaARenovar(membresia);
-        setTipoMembresiaSeleccionada(membresia.tipoMembresiaId);
+        setTipoMembresiaSeleccionada(membresia.tipoMembresiaID);
         setRenovarModalOpen(true);
     };
 
-    const handleGuardarRenovacion = (e: React.FormEvent) => {
+    const handleGuardarRenovacion = async (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!membresiaARenovar) return;
+        setLoading(true);
 
-        const nuevaMembresia: IMembresia = {
-            membresiaId: Date.now(),
-            tipoMembresiaId: tipoMembresiaSeleccionada,
-            clienteId: membresiaARenovar.clienteId,
-            fechaInicio: new Date().toISOString().split('T')[0],
-            tipoMembresia: tiposMembresia.find(t => t.tipoMembresiaId === tipoMembresiaSeleccionada),
-            cliente: membresiaARenovar.cliente,
-            estado: 'Activa'
-        };
+        try {
+            const membresiaRenovada = await ApiMembresia.renovarMembresia(membresiaARenovar.membresiaId, tipoMembresiaSeleccionada);
 
-        setMembresias([nuevaMembresia, ...membresias]);
-        setRenovarModalOpen(false);
-        setMembresiaARenovar(null);
+            // Actualizar la lista de membresías
+            setMembresias(membresias.map(m => m.membresiaId === membresiaRenovada.membresiaId ? membresiaRenovada : m));
+
+            // Crear registro de pago por la renovación
+            const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaID === tipoMembresiaSeleccionada);
+            if (tipoMembresia && setPagos) {
+                const nuevoPago = await ApiPago.crearPago({
+                    membresiaId: membresiaRenovada.membresiaId,
+                    monto: tipoMembresia.precio,
+                    fechaPago: new Date().toISOString().split('T')[0]
+                });
+                setPagos([...pagos, nuevoPago]);
+            }
+
+            setRenovarModalOpen(false);
+            setMembresiaARenovar(null);
+        } catch (error) {
+            alert(`Error al renovar membresía: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -320,9 +354,11 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                                 </tr>
                                             ) : (
                                                 clientesFiltrados.map((cliente) => {
-                                                    const tipoMembresia = tiposMembresia.find(t => t.tipoMembresiaId === cliente.idTipoMembresia);
+                                                    const membresia = membresias.find(m => m.usuarioID === cliente.Id);
+                                                    const tipoMembresia = membresia ? tiposMembresia.find(t => t.tipoMembresiaID === membresia.tipoMembresiaID) : null;
+
                                                     return (
-                                                        <tr key={cliente.id} className="hover:bg-gray-50 transition-colors group">
+                                                        <tr key={cliente.Id} className="hover:bg-gray-50 transition-colors group">
                                                             <td className="px-6 py-4 whitespace-nowrap">
                                                                 <div className="text-sm font-medium text-gray-900">
                                                                     {cliente.nombreCompleto}
@@ -335,7 +371,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap">
                                                                 <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                                    {tipoMembresia?.nombre || 'N/A'}
+                                                                    {tipoMembresia?.nombre || 'Sin Membresía'}
                                                                 </span>
                                                             </td>
                                                             <td className="px-6 py-4">
@@ -358,7 +394,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                                                         <Edit2 className="w-4 h-4" />
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => handleEliminarCliente(cliente.id)}
+                                                                        onClick={() => handleEliminarCliente(cliente.Id)}
                                                                         className="text-red-600 hover:text-red-900 transition-colors p-1 rounded-md hover:bg-red-50"
                                                                         title="Eliminar"
                                                                     >
@@ -473,10 +509,10 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                                 </tr>
                                             ) : (
                                                 asistenciasFiltradas.map((asistencia) => (
-                                                    <tr key={asistencia.asistenciaId} className="hover:bg-gray-50 transition-colors">
+                                                    <tr key={asistencia.ID_Asistencia} className="hover:bg-gray-50 transition-colors">
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <div className="text-sm text-gray-900">
-                                                                {new Date(asistencia.fechaCheckIn).toLocaleString('es-MX', {
+                                                                {new Date(asistencia.Fecha_Check_In).toLocaleString('es-MX', {
                                                                     dateStyle: 'short',
                                                                     timeStyle: 'short'
                                                                 })}
@@ -572,7 +608,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <div className="text-sm text-gray-600">
-                                                                {membresia.fechaVencimiento}
+                                                                {membresia.FechaVencimiento}
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -665,7 +701,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     {tiposMembresia.map(tipo => (
-                                        <option key={tipo.tipoMembresiaId} value={tipo.tipoMembresiaId}>
+                                        <option key={tipo.tipoMembresiaID} value={tipo.tipoMembresiaID}>
                                             {tipo.nombre} - ${tipo.precio} ({tipo.duracionDias} días)
                                         </option>
                                     ))}
@@ -699,10 +735,15 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                 </button>
                                 <button
                                     type="submit"
+                                    disabled={loading}
                                     className="flex-1 bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Check className="w-5 h-5" />
-                                    Guardar
+                                    {loading ? 'Guardando...' : (
+                                        <>
+                                            <Check className="w-5 h-5" />
+                                            Guardar
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>
@@ -729,7 +770,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                         <form onSubmit={handleGuardarRenovacion} className="p-6 space-y-5">
                             <div className="bg-blue-50 p-4 rounded-lg">
                                 <p className="text-sm text-gray-700">
-                                    <strong>Cliente:</strong> {clientes.find(c => c.id === membresiaARenovar.clienteId)?.nombreCompleto}
+                                    <strong>Cliente:</strong> {clientes.find(c => c.Id === membresiaARenovar.usuarioID)?.nombreCompleto}
                                 </p>
                             </div>
 
@@ -743,7 +784,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     {tiposMembresia.map(tipo => (
-                                        <option key={tipo.tipoMembresiaId} value={tipo.tipoMembresiaId}>
+                                        <option key={tipo.tipoMembresiaID} value={tipo.tipoMembresiaID}>
                                             {tipo.nombre} - ${tipo.precio} ({tipo.duracionDias} días)
                                         </option>
                                     ))}
@@ -753,7 +794,7 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                             <div className="bg-gray-50 p-4 rounded-lg">
                                 <p className="text-sm text-gray-600 mb-1">Precio:</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    ${tiposMembresia.find(t => t.tipoMembresiaId === tipoMembresiaSeleccionada)?.precio}
+                                    ${tiposMembresia.find(t => t.tipoMembresiaID === tipoMembresiaSeleccionada)?.precio}
                                 </p>
                             </div>
 
@@ -767,10 +808,15 @@ export default function ClientesPagina({ clientes, setClientes, asistencias, mem
                                 </button>
                                 <button
                                     type="submit"
+                                    disabled={loading}
                                     className="flex-1 bg-green-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <RefreshCw className="w-5 h-5" />
-                                    Renovar
+                                    {loading ? 'Renovando...' : (
+                                        <>
+                                            <RefreshCw className="w-5 h-5" />
+                                            Renovar
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>

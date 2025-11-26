@@ -3,6 +3,9 @@ import { Plus, Edit2, Trash2, X, Check, Search, Wrench, Calendar, DollarSign, Fi
 import type { IEquipamiento } from '../../models/IEquipamiento';
 import type { IEquipoAccesorio } from '../../models/IEquipoAccesorio';
 import type { IMantenimiento } from '../../models/IMantenimiento';
+import { ApiEquipamiento } from '../../api/equipamiento/ApiEquipamiento';
+import { ApiEquipoAccesorio } from '../../api/equipamiento/ApiEquipoAccesorio';
+import { ApiMantenimiento } from '../../api/equipamiento/ApiMantenimiento';
 
 interface EquipamientoPaginaProps {
     equipamiento: IEquipamiento[];
@@ -22,6 +25,7 @@ export default function EquipamientoPagina({
     setMantenimientos
 }: EquipamientoPaginaProps) {
     const [tabActual, setTabActual] = useState<'equipo' | 'mantenimiento'>('equipo');
+    const [loading, setLoading] = useState(false);
 
     // ==================== EQUIPO ====================
     const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +43,7 @@ export default function EquipamientoPagina({
     const [editingAccesorio, setEditingAccesorio] = useState<IEquipoAccesorio | null>(null);
     const [formDataAccesorio, setFormDataAccesorio] = useState<Omit<IEquipoAccesorio, 'accesorioId'>>({
         nombre: '',
-        cantidad: '',
+        cantidad: 0,
         notas: ''
     });
 
@@ -72,41 +76,54 @@ export default function EquipamientoPagina({
         setFormDataEquipo({
             nombre: equipo.nombre,
             tipo: equipo.tipo,
-            imagenUrl: equipo.imagenUrl,
-            descripcion: equipo.descripcion
+            imagenUrl: equipo.imagenUrl || '',
+            descripcion: equipo.descripcion || ''
         });
         setModalEquipoOpen(true);
     };
 
-    const handleGuardarEquipo = (e: React.FormEvent) => {
+    const handleGuardarEquipo = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
 
-        if (editingEquipo) {
-            setEquipamiento(equipamiento.map(eq =>
-                eq.equipoId === editingEquipo.equipoId
-                    ? { ...formDataEquipo, equipoId: editingEquipo.equipoId }
-                    : eq
-            ));
-        } else {
-            const nuevoEquipo: IEquipamiento = {
-                ...formDataEquipo,
-                equipoId: Date.now()
-            };
-            setEquipamiento([...equipamiento, nuevoEquipo]);
+        try {
+            if (editingEquipo) {
+                await ApiEquipamiento.actualizarEquipo(editingEquipo.equipoId, formDataEquipo);
+                setEquipamiento(equipamiento.map(eq =>
+                    eq.equipoId === editingEquipo.equipoId
+                        ? { ...formDataEquipo, equipoId: editingEquipo.equipoId }
+                        : eq
+                ));
+            } else {
+                const nuevoEquipo = await ApiEquipamiento.crearEquipo(formDataEquipo);
+                setEquipamiento([...equipamiento, nuevoEquipo]);
+            }
+            setModalEquipoOpen(false);
+        } catch (error) {
+            alert(`Error al guardar equipo: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setLoading(false);
         }
-        setModalEquipoOpen(false);
     };
 
-    const handleEliminarEquipo = (id: number) => {
+    const handleEliminarEquipo = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este equipo?')) {
-            setEquipamiento(equipamiento.filter(eq => eq.equipoId !== id));
+            setLoading(true);
+            try {
+                await ApiEquipamiento.eliminarEquipo(id);
+                setEquipamiento(equipamiento.filter(eq => eq.equipoId !== id));
+            } catch (error) {
+                alert(`Error al eliminar equipo: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
     // ==================== ACCESORIOS - FUNCIONES ====================
     const handleNuevoAccesorio = () => {
         setEditingAccesorio(null);
-        setFormDataAccesorio({ nombre: '', cantidad: '', notas: '' });
+        setFormDataAccesorio({ nombre: '', cantidad: 0, notas: '' });
         setModalAccesorioOpen(true);
     };
 
@@ -120,28 +137,41 @@ export default function EquipamientoPagina({
         setModalAccesorioOpen(true);
     };
 
-    const handleGuardarAccesorio = (e: React.FormEvent) => {
+    const handleGuardarAccesorio = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
 
-        if (editingAccesorio) {
-            setAccesorios(accesorios.map(acc =>
-                acc.accesorioId === editingAccesorio.accesorioId
-                    ? { ...formDataAccesorio, accesorioId: editingAccesorio.accesorioId }
-                    : acc
-            ));
-        } else {
-            const nuevoAccesorio: IEquipoAccesorio = {
-                ...formDataAccesorio,
-                accesorioId: Date.now()
-            };
-            setAccesorios([...accesorios, nuevoAccesorio]);
+        try {
+            if (editingAccesorio) {
+                await ApiEquipoAccesorio.actualizarAccesorio(editingAccesorio.accesorioId, formDataAccesorio);
+                setAccesorios(accesorios.map(acc =>
+                    acc.accesorioId === editingAccesorio.accesorioId
+                        ? { ...formDataAccesorio, accesorioId: editingAccesorio.accesorioId }
+                        : acc
+                ));
+            } else {
+                const nuevoAccesorio = await ApiEquipoAccesorio.crearAccesorio(formDataAccesorio);
+                setAccesorios([...accesorios, nuevoAccesorio]);
+            }
+            setModalAccesorioOpen(false);
+        } catch (error) {
+            alert(`Error al guardar accesorio: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setLoading(false);
         }
-        setModalAccesorioOpen(false);
     };
 
-    const handleEliminarAccesorio = (id: number) => {
+    const handleEliminarAccesorio = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este accesorio?')) {
-            setAccesorios(accesorios.filter(acc => acc.accesorioId !== id));
+            setLoading(true);
+            try {
+                await ApiEquipoAccesorio.eliminarAccesorio(id);
+                setAccesorios(accesorios.filter(acc => acc.accesorioId !== id));
+            } catch (error) {
+                alert(`Error al eliminar accesorio: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -186,28 +216,41 @@ export default function EquipamientoPagina({
         setModalMantenimientoOpen(true);
     };
 
-    const handleGuardarMantenimiento = (e: React.FormEvent) => {
+    const handleGuardarMantenimiento = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
 
-        if (editingMantenimiento) {
-            setMantenimientos(mantenimientos.map(mant =>
-                mant.mantenimientoId === editingMantenimiento.mantenimientoId
-                    ? { ...formDataMantenimiento, mantenimientoId: editingMantenimiento.mantenimientoId }
-                    : mant
-            ));
-        } else {
-            const nuevoMantenimiento: IMantenimiento = {
-                ...formDataMantenimiento,
-                mantenimientoId: Date.now()
-            };
-            setMantenimientos([...mantenimientos, nuevoMantenimiento]);
+        try {
+            if (editingMantenimiento) {
+                await ApiMantenimiento.actualizarMantenimiento(editingMantenimiento.mantenimientoId, formDataMantenimiento);
+                setMantenimientos(mantenimientos.map(mant =>
+                    mant.mantenimientoId === editingMantenimiento.mantenimientoId
+                        ? { ...formDataMantenimiento, mantenimientoId: editingMantenimiento.mantenimientoId }
+                        : mant
+                ));
+            } else {
+                const nuevoMantenimiento = await ApiMantenimiento.crearMantenimiento(formDataMantenimiento);
+                setMantenimientos([...mantenimientos, nuevoMantenimiento]);
+            }
+            setModalMantenimientoOpen(false);
+        } catch (error) {
+            alert(`Error al guardar mantenimiento: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setLoading(false);
         }
-        setModalMantenimientoOpen(false);
     };
 
-    const handleEliminarMantenimiento = (id: number) => {
+    const handleEliminarMantenimiento = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este mantenimiento?')) {
-            setMantenimientos(mantenimientos.filter(mant => mant.mantenimientoId !== id));
+            setLoading(true);
+            try {
+                await ApiMantenimiento.eliminarMantenimiento(id);
+                setMantenimientos(mantenimientos.filter(mant => mant.mantenimientoId !== id));
+            } catch (error) {
+                alert(`Error al eliminar mantenimiento: ${error instanceof Error ? error.message : 'Desconocido'}`);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -227,8 +270,8 @@ export default function EquipamientoPagina({
                             <button
                                 onClick={() => setTabActual('equipo')}
                                 className={`py-4 px-6 font-medium text-sm transition-colors border-b-2 ${tabActual === 'equipo'
-                                        ? 'border-red-500 text-red-600'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                                    ? 'border-red-500 text-red-600'
+                                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                                     }`}
                             >
                                 <div className="flex items-center gap-2">
@@ -239,8 +282,8 @@ export default function EquipamientoPagina({
                             <button
                                 onClick={() => setTabActual('mantenimiento')}
                                 className={`py-4 px-6 font-medium text-sm transition-colors border-b-2 ${tabActual === 'mantenimiento'
-                                        ? 'border-red-500 text-red-600'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                                    ? 'border-red-500 text-red-600'
+                                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                                     }`}
                             >
                                 <div className="flex items-center gap-2">
@@ -581,8 +624,8 @@ export default function EquipamientoPagina({
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap">
                                                                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${mantenimiento.enCurso
-                                                                        ? 'bg-yellow-100 text-yellow-800'
-                                                                        : 'bg-green-100 text-green-800'
+                                                                    ? 'bg-yellow-100 text-yellow-800'
+                                                                    : 'bg-green-100 text-green-800'
                                                                     }`}>
                                                                     {mantenimiento.enCurso ? 'En Curso' : 'Completado'}
                                                                 </span>
@@ -703,10 +746,15 @@ export default function EquipamientoPagina({
                                 </button>
                                 <button
                                     type="submit"
+                                    disabled={loading}
                                     className="flex-1 bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Check className="w-5 h-5" />
-                                    Guardar
+                                    {loading ? 'Guardando...' : (
+                                        <>
+                                            <Check className="w-5 h-5" />
+                                            Guardar
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>
@@ -750,12 +798,13 @@ export default function EquipamientoPagina({
                                     Cantidad
                                 </label>
                                 <input
-                                    type="text"
+                                    type="number"
                                     required
+                                    min="0"
                                     value={formDataAccesorio.cantidad}
-                                    onChange={(e) => setFormDataAccesorio({ ...formDataAccesorio, cantidad: e.target.value })}
+                                    onChange={(e) => setFormDataAccesorio({ ...formDataAccesorio, cantidad: Number(e.target.value) })}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Ej: 10 pares"
+                                    placeholder="Ej: 10"
                                 />
                             </div>
 
@@ -781,10 +830,15 @@ export default function EquipamientoPagina({
                                 </button>
                                 <button
                                     type="submit"
+                                    disabled={loading}
                                     className="flex-1 bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Check className="w-5 h-5" />
-                                    Guardar
+                                    {loading ? 'Guardando...' : (
+                                        <>
+                                            <Check className="w-5 h-5" />
+                                            Guardar
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>
@@ -819,9 +873,9 @@ export default function EquipamientoPagina({
                                     onChange={(e) => setFormDataMantenimiento({ ...formDataMantenimiento, equipoId: Number(e.target.value) })}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
-                                    {equipamiento.map(equipo => (
-                                        <option key={equipo.equipoId} value={equipo.equipoId}>
-                                            {equipo.nombre} ({equipo.tipo})
+                                    {equipamiento.map(eq => (
+                                        <option key={eq.equipoId} value={eq.equipoId}>
+                                            {eq.nombre}
                                         </option>
                                     ))}
                                 </select>
@@ -829,18 +883,18 @@ export default function EquipamientoPagina({
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Descripción del Mantenimiento
+                                    Descripción
                                 </label>
                                 <textarea
                                     required
                                     value={formDataMantenimiento.descripcion}
                                     onChange={(e) => setFormDataMantenimiento({ ...formDataMantenimiento, descripcion: e.target.value })}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-none"
-                                    placeholder="Describe el mantenimiento realizado o a realizar..."
+                                    placeholder="Detalles del mantenimiento..."
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Fecha Inicio
@@ -853,7 +907,6 @@ export default function EquipamientoPagina({
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
-
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Fecha Fin (opcional)
@@ -893,10 +946,15 @@ export default function EquipamientoPagina({
                                 </button>
                                 <button
                                     type="submit"
+                                    disabled={loading}
                                     className="flex-1 bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Check className="w-5 h-5" />
-                                    Guardar
+                                    {loading ? 'Guardando...' : (
+                                        <>
+                                            <Check className="w-5 h-5" />
+                                            Guardar
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>

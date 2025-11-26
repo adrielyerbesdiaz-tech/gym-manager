@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dumbbell, CheckCircle, UserCheck, LogIn } from 'lucide-react';
-import { ClienteApi } from '../../api/ClienteApi';
+import { ApiCliente } from '../../api/clientes/ApiCliente';
+import { ApiAsistencia } from '../../api/asistencias/ApiAsistencia';
 
 interface AsistenciaPaginaProps {
     onLoginClick?: () => void;
@@ -15,58 +16,58 @@ export default function AsistenciaPagina({ onLoginClick, onRegisterAttendance }:
     const [error, setError] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!memberId.trim()) return;
+        e.preventDefault();
+        if (!memberId.trim()) return;
 
-    setIsProcessing(true);
-    setError('');
-    
-    try {
-        // 1. Buscar cliente por teléfono exacto
-        const cliente = await ClienteApi.buscarClientePorTelefono(memberId.trim());
-        
-        if (!cliente) {
-            throw new Error('Cliente no encontrado. Verifique el teléfono.');
+        setIsProcessing(true);
+        setError('');
+
+        try {
+            // 1. Buscar cliente por teléfono exacto
+            const cliente = await ApiCliente.buscarClientePorTelefono(memberId.trim());
+
+            if (!cliente) {
+                throw new Error('Cliente no encontrado. Verifique el teléfono.');
+            }
+
+            // 2. Verificar si ya registró asistencia hoy
+            const yaRegistro = await ApiAsistencia.verificarAsistenciaHoy(cliente.Id);
+
+            if (yaRegistro) {
+                throw new Error(`${cliente.nombreCompleto} ya registró su asistencia hoy.`);
+            }
+
+            // 3. Registrar asistencia (usando la función de App.tsx si está disponible)
+            let registroExitoso = false;
+
+            if (onRegisterAttendance) {
+                registroExitoso = await onRegisterAttendance(cliente.Id, cliente.nombreCompleto);
+            } else {
+                // Fallback: registrar directamente
+                await ApiAsistencia.registrarAsistencia(cliente.Id);
+                registroExitoso = true;
+            }
+
+            if (registroExitoso) {
+                // 4. Mostrar éxito
+                setMemberName(cliente.nombreCompleto);
+                setIsRegistered(true);
+
+                // 5. Resetear después de 3 segundos
+                setTimeout(() => {
+                    setIsRegistered(false);
+                    setMemberId('');
+                    setMemberName('');
+                }, 3000);
+            }
+
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Error al registrar asistencia.';
+            setError(errorMessage);
+        } finally {
+            setIsProcessing(false);
         }
-
-        // 2. Verificar si ya registró asistencia hoy
-        const yaRegistro = await ClienteApi.verificarAsistenciaHoy(cliente.id);
-        
-        if (yaRegistro) {
-            throw new Error(`${cliente.nombreCompleto} ya registró su asistencia hoy.`);
-        }
-
-        // 3. Registrar asistencia (usando la función de App.tsx si está disponible)
-        let registroExitoso = false;
-        
-        if (onRegisterAttendance) {
-            registroExitoso = await onRegisterAttendance(cliente.id, cliente.nombreCompleto);
-        } else {
-            // Fallback: registrar directamente
-            await ClienteApi.registrarAsistencia(cliente.id);
-            registroExitoso = true;
-        }
-
-        if (registroExitoso) {
-            // 4. Mostrar éxito
-            setMemberName(cliente.nombreCompleto);
-            setIsRegistered(true);
-
-            // 5. Resetear después de 3 segundos
-            setTimeout(() => {
-                setIsRegistered(false);
-                setMemberId('');
-                setMemberName('');
-            }, 3000);
-        }
-
-    } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Error al registrar asistencia.';
-        setError(errorMessage);
-    } finally {
-        setIsProcessing(false);
-    }
-};
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100 flex items-center justify-center p-4">

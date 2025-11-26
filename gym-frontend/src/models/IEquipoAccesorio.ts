@@ -1,6 +1,7 @@
 export interface IEquipoAccesorio {
     accesorioId: number;
     nombre: string;
-    cantidad: string;
+    cantidad: number;
+
     notas: string;
 }

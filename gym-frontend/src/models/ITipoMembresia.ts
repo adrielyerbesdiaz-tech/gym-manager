@@ -1,8 +1,9 @@
 export interface ITipoMembresia {
-    tipoMembresiaId: number;
+    tipoMembresiaID: number;
     nombre: string;
-    duracionDias: number;
-    duracionTipo: string; 
-    duracionValor: number; 
+    duracionValor: number;
+    duracionTipo: string;
     precio: number;
+    // Calculated property for frontend convenience, might need to be computed manually if not from backend
+    duracionDias?: number;
 }

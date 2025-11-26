@@ -1,8 +1,7 @@
 export interface ICliente {
-    id: number;
+    Id: number;
     nombreCompleto: string;
-    telefono: string;
-    idTipoMembresia: number;
+    telefono: number;
     notas: string;
     fechaRegistro: string;
 }

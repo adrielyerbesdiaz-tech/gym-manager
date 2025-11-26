@@ -1,30 +1,27 @@
 import { ApiBase } from '../base/ApiBase';
-import { transformClienteFromBackend } from '../base/Transformadores';
 
 export class ApiCliente {
   static async obtenerClientes(): Promise<any[]> {
-    const data = await ApiBase.get('/clientes');
-    return data.map(transformClienteFromBackend);
+    return ApiBase.get('/clientes');
   }
 
   static async buscarClientes(criterio: string): Promise<any[]> {
     if (!criterio.trim()) return [];
-    const data = await ApiBase.get(`/clientes/buscar/${encodeURIComponent(criterio)}`);
-    return data.map(transformClienteFromBackend);
+    return ApiBase.get(`/clientes/buscar/${encodeURIComponent(criterio)}`);
   }
 
   static async buscarClientePorTelefono(telefono: string): Promise<any | null> {
     try {
-      const data = await ApiBase.get(`/clientes/telefono/${encodeURIComponent(telefono)}`);
-      return transformClienteFromBackend(data);
+      return await ApiBase.get(`/clientes/telefono/${encodeURIComponent(telefono)}`);
     } catch (error) {
       console.error('Error buscando cliente por teléfono:', error);
-      
+
       // Fallback
       try {
         const clientes = await this.buscarClientes(telefono);
-        const clienteExacto = clientes.find((cliente: any) => 
-          cliente.telefono === telefono
+        // Backend returns 'telefono' as number
+        const clienteExacto = clientes.find((cliente: any) =>
+          cliente.telefono === Number(telefono)
         );
         return clienteExacto || null;
       } catch (fallbackError) {

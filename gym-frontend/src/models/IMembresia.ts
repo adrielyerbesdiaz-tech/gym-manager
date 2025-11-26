@@ -3,9 +3,10 @@ import type { ICliente } from "./ICliente";
 
 export interface IMembresia {
     membresiaId: number;
-    tipoMembresiaId: number;
-    clienteId: number;
+    tipoMembresiaID: number;
+    usuarioID: number;
     fechaInicio: string;
+    FechaVencimiento: string;
 
     // Propiedades opcionales para cuando el backend envía datos populados (JOINs)
     tipoMembresia?: ITipoMembresia;

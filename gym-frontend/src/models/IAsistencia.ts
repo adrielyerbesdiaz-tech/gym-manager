@@ -1,12 +1,7 @@
 export interface IAsistencia {
-    asistenciaId: number;
-    clienteId: number;
-    fechaCheckIn: string;
-    fechaRegistro?: string;
-    // Campos opcionales para compatibilidad
-    membresiaId?: number;
-    tipoMembresiaId?: number;
-    fechaInicio?: string;
-    fechaVencimiento: string;
-    estado?: string;
+    ID_Asistencia: number;
+    ID_Cliente: number;
+    Fecha_Check_In: string;
+    Nombre_Completo?: string;
+    Telefono?: string;
 }

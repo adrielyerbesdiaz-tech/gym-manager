@@ -1,10 +1,12 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Plus, Calendar, User, FileText, CreditCard, Wallet, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Plus, Calendar, User, FileText, CreditCard, Wallet, BarChart3, X, Check } from 'lucide-react';
 import type { IPago } from '../../models/IPago';
 import type { IMantenimiento } from '../../models/IMantenimiento';
 import type { IMembresia } from '../../models/IMembresia';
 import type { IEquipamiento } from '../../models/IEquipamiento';
 import type { ICliente } from '../../models/ICliente';
+import type { ITipoMembresia } from '../../models/ITipoMembresia';
+import { ApiPago } from '../../api/pagos/ApiPago';
 
 interface FinanzasPaginaProps {
     pagos: IPago[];
@@ -13,6 +15,7 @@ interface FinanzasPaginaProps {
     membresias: IMembresia[];
     equipamiento: IEquipamiento[];
     clientes: ICliente[];
+    tiposMembresia: ITipoMembresia[];
 }
 
 export default function FinanzasPagina({
@@ -21,9 +24,11 @@ export default function FinanzasPagina({
     mantenimientos,
     membresias,
     equipamiento,
-    clientes
+    clientes,
+    tiposMembresia
 }: FinanzasPaginaProps) {
     const [tabActual, setTabActual] = useState<'ingresos' | 'egresos' | 'resumen'>('resumen');
+    const [loading, setLoading] = useState(false);
 
     // ==================== INGRESOS ====================
     const [modalPagoOpen, setModalPagoOpen] = useState(false);
@@ -48,11 +53,14 @@ export default function FinanzasPagina({
     // ==================== FUNCIONES INGRESOS ====================
     const pagosConDetalles = pagos.map(pago => {
         const membresia = membresias.find(m => m.membresiaId === pago.membresiaId);
-        const cliente = membresia ? clientes.find(c => c.id === membresia.clienteId) : null;
+        const cliente = membresia ? clientes.find(c => c.Id === membresia.usuarioID) : null;
+        const tipoMembresia = membresia ? tiposMembresia.find(t => t.tipoMembresiaID === membresia.tipoMembresiaID) : null;
+
         return {
             ...pago,
             membresia,
-            cliente
+            cliente,
+            tipoMembresia
         };
     });
 
@@ -73,14 +81,18 @@ export default function FinanzasPagina({
         setModalPagoOpen(true);
     };
 
-    const handleGuardarPago = (e: React.FormEvent) => {
+    const handleGuardarPago = async (e: React.FormEvent) => {
         e.preventDefault();
-        const nuevoPago: IPago = {
-            ...formDataPago,
-            pagoId: Date.now()
-        };
-        setPagos([...pagos, nuevoPago]);
-        setModalPagoOpen(false);
+        setLoading(true);
+        try {
+            const nuevoPago = await ApiPago.crearPago(formDataPago);
+            setPagos([...pagos, nuevoPago]);
+            setModalPagoOpen(false);
+        } catch (error) {
+            alert(`Error al registrar pago: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     // ==================== FUNCIONES EGRESOS ====================
@@ -141,7 +153,7 @@ export default function FinanzasPagina({
 
         pagos.forEach(pago => {
             const membresia = membresias.find(m => m.membresiaId === pago.membresiaId);
-            const cliente = membresia ? clientes.find(c => c.id === membresia.clienteId) : null;
+            const cliente = membresia ? clientes.find(c => c.Id === membresia.usuarioID) : null;
             transacciones.push({
                 tipo: 'ingreso',
                 fecha: pago.fechaPago,
@@ -420,7 +432,7 @@ export default function FinanzasPagina({
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                                {pago.membresia?.tipoMembresia?.nombre || 'N/A'}
+                                                                {pago.tipoMembresia?.nombre || 'N/A'}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -600,9 +612,7 @@ export default function FinanzasPagina({
                                 onClick={() => setModalPagoOpen(false)}
                                 className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full p-1 transition-colors"
                             >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
@@ -618,10 +628,11 @@ export default function FinanzasPagina({
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     {membresias.map(membresia => {
-                                        const cliente = clientes.find(c => c.id === membresia.clienteId);
+                                        const cliente = clientes.find(c => c.Id === membresia.usuarioID);
+                                        const tipo = tiposMembresia.find(t => t.tipoMembresiaID === membresia.tipoMembresiaID);
                                         return (
                                             <option key={membresia.membresiaId} value={membresia.membresiaId}>
-                                                {cliente?.nombreCompleto} - {membresia.tipoMembresia?.nombre}
+                                                {cliente?.nombreCompleto} - {tipo?.nombre || 'Desconocido'}
                                             </option>
                                         );
                                     })}
@@ -667,10 +678,15 @@ export default function FinanzasPagina({
                                 </button>
                                 <button
                                     type="submit"
+                                    disabled={loading}
                                     className="flex-1 bg-green-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <DollarSign className="w-5 h-5" />
-                                    Guardar
+                                    {loading ? 'Guardando...' : (
+                                        <>
+                                            <Check className="w-5 h-5" />
+                                            Guardar
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>

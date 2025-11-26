@@ -1,11 +1,20 @@
 import { ApiBase } from '../base/ApiBase';
-import { transformMembresiaFromBackend } from '../base/Transformadores';
+import type { IMembresia } from '../../models/IMembresia';
 
-export class MembresiaApi {
-  static async obtenerMembresiasCliente(clienteId: number): Promise<any[]> {
-    const data = await ApiBase.get(`/membresias/cliente/${clienteId}`);
-    return data.map(transformMembresiaFromBackend);
+export class ApiMembresia {
+  static async obtenerMembresias(): Promise<IMembresia[]> {
+    return ApiBase.get('/membresias');
   }
 
-  // Agregar más métodos según necesites
+  static async obtenerMembresiasCliente(clienteId: number): Promise<IMembresia[]> {
+    return ApiBase.get(`/membresias/cliente/${clienteId}`);
+  }
+
+  static async crearMembresia(membresia: Omit<IMembresia, 'membresiaId'>): Promise<IMembresia> {
+    return ApiBase.post('/membresias', membresia);
+  }
+
+  static async renovarMembresia(membresiaId: number, datosRenovacion: any): Promise<void> {
+    await ApiBase.post(`/membresias/${membresiaId}/renovar`, datosRenovacion);
+  }
 }
