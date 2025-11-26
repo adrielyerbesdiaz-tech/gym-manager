@@ -99,7 +99,7 @@ export class ServicioAsistencia {
 
     // Obtener reporte de asistencias con información del cliente
     public generarReporteAsistencias(limite?: number): any[] {
-        const asistencias = this.gestorAsistencia.obtenerTodos(limite);
+        const asistencias = this.gestorAsistencia.obtenerTodos();
         
         return asistencias.map(asist => {
             const cliente = this.gestorCliente.buscarPorId(asist.getClienteID());

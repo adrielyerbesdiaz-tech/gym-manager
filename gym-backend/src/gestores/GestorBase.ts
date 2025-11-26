@@ -30,9 +30,9 @@ export abstract class GestorBase<T> {
     }
 
     // Método genérico para obtener todos
-    public obtenerTodos(orderBy: string = 'ID'): T[] {
+    public obtenerTodos(): T[] {
         const stmt = this.db.prepare(`
-            SELECT * FROM ${this.getNombreTabla()} ORDER BY ${orderBy}
+            SELECT * FROM ${this.getNombreTabla()}
         `);
 
         const rows = stmt.all() as any[];
