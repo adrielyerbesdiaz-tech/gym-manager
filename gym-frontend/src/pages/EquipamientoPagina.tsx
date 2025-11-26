@@ -1,8 +1,12 @@
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useState, type Dispatch, type SetStateAction, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Check, Search, Wrench, Calendar, DollarSign, FileText, Dumbbell, Package } from 'lucide-react';
 import type { IEquipamiento } from '../models/IEquipamiento';
 import type { IEquipoAccesorio } from '../models/IEquipoAccesorio';
 import type { IMantenimiento } from '../models/IMantenimiento';
+import { EquipamientoApi } from '../api/rutas/ApiEquipamiento';
+import { EquipamientoAccesorioApi } from '../api/rutas/ApiEquipamientoAccesorio';
+import { MantenimientoApi } from '../api/rutas/ApiMantenimiento';
+import { transformEquipamientoFromBackend, transformEquipamientoAccesorioFromBackend, transformMantenimientoFromBackend } from '../api/Transformadores';
 
 interface EquipamientoPaginaProps {
     equipamiento: IEquipamiento[];
@@ -22,6 +26,7 @@ export default function EquipamientoPagina({
     setMantenimientos
 }: EquipamientoPaginaProps) {
     const [tabActual, setTabActual] = useState<'equipo' | 'mantenimiento'>('equipo');
+    const [cargando, setCargando] = useState(true);
 
     // ==================== EQUIPO ====================
     const [searchTerm, setSearchTerm] = useState('');
@@ -55,6 +60,32 @@ export default function EquipamientoPagina({
         costo: 0
     });
 
+    // ==================== CARGA INICIAL ====================
+    useEffect(() => {
+        cargarDatosIniciales();
+    }, []);
+
+    const cargarDatosIniciales = async () => {
+        try {
+            setCargando(true);
+            const [equipamientoData, accesoriosData, mantenimientosData] = await Promise.all([
+                EquipamientoApi.obtenerEquipamiento(),
+                EquipamientoAccesorioApi.obtenerAccesorios(),
+                MantenimientoApi.obtenerMantenimientos()
+            ]);
+
+            // Transformar datos del backend al formato del frontend
+            setEquipamiento(equipamientoData.map(transformEquipamientoFromBackend));
+            setAccesorios(accesoriosData.map(transformEquipamientoAccesorioFromBackend));
+            setMantenimientos(mantenimientosData.map(transformMantenimientoFromBackend));
+        } catch (error) {
+            console.error('Error cargando datos iniciales:', error);
+            alert('Error al cargar los datos. Por favor, recarga la página.');
+        } finally {
+            setCargando(false);
+        }
+    };
+
     // ==================== EQUIPO - FUNCIONES ====================
     const equipamientoFiltrado = equipamiento.filter(equipo =>
         equipo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,34 +103,43 @@ export default function EquipamientoPagina({
         setFormDataEquipo({
             nombre: equipo.nombre,
             tipo: equipo.tipo,
-            imagenUrl: equipo.imagenUrl,
-            descripcion: equipo.descripcion
+            imagenUrl: equipo.imagenUrl || '',
+            descripcion: equipo.descripcion || ''
         });
         setModalEquipoOpen(true);
     };
 
-    const handleGuardarEquipo = (e: React.FormEvent) => {
+    const handleGuardarEquipo = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (editingEquipo) {
-            setEquipamiento(equipamiento.map(eq =>
-                eq.equipoId === editingEquipo.equipoId
-                    ? { ...formDataEquipo, equipoId: editingEquipo.equipoId }
-                    : eq
-            ));
-        } else {
-            const nuevoEquipo: IEquipamiento = {
-                ...formDataEquipo,
-                equipoId: Date.now()
-            };
-            setEquipamiento([...equipamiento, nuevoEquipo]);
+        try {
+            if (editingEquipo) {
+                await EquipamientoApi.actualizarEquipamiento(editingEquipo.equipoId, formDataEquipo);
+                setEquipamiento(equipamiento.map(eq =>
+                    eq.equipoId === editingEquipo.equipoId
+                        ? { ...formDataEquipo, equipoId: editingEquipo.equipoId }
+                        : eq
+                ));
+            } else {
+                const nuevoEquipo = await EquipamientoApi.crearEquipamiento(formDataEquipo);
+                setEquipamiento([...equipamiento, { ...formDataEquipo, equipoId: nuevoEquipo.id }]);
+            }
+            setModalEquipoOpen(false);
+        } catch (error) {
+            console.error('Error guardando equipo:', error);
+            alert('Error al guardar el equipo. Por favor, intenta nuevamente.');
         }
-        setModalEquipoOpen(false);
     };
 
-    const handleEliminarEquipo = (id: number) => {
+    const handleEliminarEquipo = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este equipo?')) {
-            setEquipamiento(equipamiento.filter(eq => eq.equipoId !== id));
+            try {
+                await EquipamientoApi.eliminarEquipamiento(id);
+                setEquipamiento(equipamiento.filter(eq => eq.equipoId !== id));
+            } catch (error) {
+                console.error('Error eliminando equipo:', error);
+                alert('Error al eliminar el equipo. Por favor, intenta nuevamente.');
+            }
         }
     };
 
@@ -120,28 +160,37 @@ export default function EquipamientoPagina({
         setModalAccesorioOpen(true);
     };
 
-    const handleGuardarAccesorio = (e: React.FormEvent) => {
+    const handleGuardarAccesorio = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (editingAccesorio) {
-            setAccesorios(accesorios.map(acc =>
-                acc.accesorioId === editingAccesorio.accesorioId
-                    ? { ...formDataAccesorio, accesorioId: editingAccesorio.accesorioId }
-                    : acc
-            ));
-        } else {
-            const nuevoAccesorio: IEquipoAccesorio = {
-                ...formDataAccesorio,
-                accesorioId: Date.now()
-            };
-            setAccesorios([...accesorios, nuevoAccesorio]);
+        try {
+            if (editingAccesorio) {
+                await EquipamientoAccesorioApi.actualizarAccesorio(editingAccesorio.accesorioId, formDataAccesorio);
+                setAccesorios(accesorios.map(acc =>
+                    acc.accesorioId === editingAccesorio.accesorioId
+                        ? { ...formDataAccesorio, accesorioId: editingAccesorio.accesorioId }
+                        : acc
+                ));
+            } else {
+                const nuevoAccesorio = await EquipamientoAccesorioApi.crearAccesorio(formDataAccesorio);
+                setAccesorios([...accesorios, { ...formDataAccesorio, accesorioId: nuevoAccesorio.id }]);
+            }
+            setModalAccesorioOpen(false);
+        } catch (error) {
+            console.error('Error guardando accesorio:', error);
+            alert('Error al guardar el accesorio. Por favor, intenta nuevamente.');
         }
-        setModalAccesorioOpen(false);
     };
 
-    const handleEliminarAccesorio = (id: number) => {
+    const handleEliminarAccesorio = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este accesorio?')) {
-            setAccesorios(accesorios.filter(acc => acc.accesorioId !== id));
+            try {
+                await EquipamientoAccesorioApi.eliminarAccesorio(id);
+                setAccesorios(accesorios.filter(acc => acc.accesorioId !== id));
+            } catch (error) {
+                console.error('Error eliminando accesorio:', error);
+                alert('Error al eliminar el accesorio. Por favor, intenta nuevamente.');
+            }
         }
     };
 
@@ -186,30 +235,50 @@ export default function EquipamientoPagina({
         setModalMantenimientoOpen(true);
     };
 
-    const handleGuardarMantenimiento = (e: React.FormEvent) => {
+    const handleGuardarMantenimiento = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (editingMantenimiento) {
-            setMantenimientos(mantenimientos.map(mant =>
-                mant.mantenimientoId === editingMantenimiento.mantenimientoId
-                    ? { ...formDataMantenimiento, mantenimientoId: editingMantenimiento.mantenimientoId }
-                    : mant
-            ));
-        } else {
-            const nuevoMantenimiento: IMantenimiento = {
-                ...formDataMantenimiento,
-                mantenimientoId: Date.now()
-            };
-            setMantenimientos([...mantenimientos, nuevoMantenimiento]);
+        try {
+            if (editingMantenimiento) {
+                await MantenimientoApi.actualizarMantenimiento(editingMantenimiento.mantenimientoId, formDataMantenimiento);
+                setMantenimientos(mantenimientos.map(mant =>
+                    mant.mantenimientoId === editingMantenimiento.mantenimientoId
+                        ? { ...formDataMantenimiento, mantenimientoId: editingMantenimiento.mantenimientoId }
+                        : mant
+                ));
+            } else {
+                const nuevoMantenimiento = await MantenimientoApi.crearMantenimiento(formDataMantenimiento);
+                setMantenimientos([...mantenimientos, { ...formDataMantenimiento, mantenimientoId: nuevoMantenimiento.id }]);
+            }
+            setModalMantenimientoOpen(false);
+        } catch (error) {
+            console.error('Error guardando mantenimiento:', error);
+            alert('Error al guardar el mantenimiento. Por favor, intenta nuevamente.');
         }
-        setModalMantenimientoOpen(false);
     };
 
-    const handleEliminarMantenimiento = (id: number) => {
+    const handleEliminarMantenimiento = async (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este mantenimiento?')) {
-            setMantenimientos(mantenimientos.filter(mant => mant.mantenimientoId !== id));
+            try {
+                await MantenimientoApi.eliminarMantenimiento(id);
+                setMantenimientos(mantenimientos.filter(mant => mant.mantenimientoId !== id));
+            } catch (error) {
+                console.error('Error eliminando mantenimiento:', error);
+                alert('Error al eliminar el mantenimiento. Por favor, intenta nuevamente.');
+            }
         }
     };
+
+    if (cargando) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Cargando equipamiento...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">

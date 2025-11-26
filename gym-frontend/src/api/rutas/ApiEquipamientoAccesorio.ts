@@ -24,4 +24,8 @@ export class EquipamientoAccesorioApi {
   static async eliminarAccesorio(id: number): Promise<void> {
     await ApiBase.delete(`/accesorios/${id}`);
   }
+
+  static async actualizarAccesorio(id: number, accesorioData: any): Promise<void> {
+  await ApiBase.put(`/accesorios/${id}`, accesorioData);
+}
 }

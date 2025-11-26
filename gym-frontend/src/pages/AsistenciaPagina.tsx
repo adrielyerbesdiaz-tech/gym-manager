@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dumbbell, CheckCircle, UserCheck, LogIn } from 'lucide-react';
-import { AsistenciaApi } from '../../api/asistencias/ApiAsistencia';
+import { AsistenciaApi } from '../api/rutas/ApiAsistencia';
+import { ClienteApi } from '../api/rutas/ApiCliente';
 
 interface AsistenciaPaginaProps {
     onLoginClick?: () => void;
@@ -23,7 +24,7 @@ export default function AsistenciaPagina({ onLoginClick, onRegisterAttendance }:
     
     try {
         // 1. Buscar cliente por teléfono exacto
-        const cliente = await AsistenciaApi.buscarClientePorTelefono(memberId.trim());
+        const cliente = await ClienteApi.buscarClientePorTelefono(memberId.trim());
         
         if (!cliente) {
             throw new Error('Cliente no encontrado. Verifique el teléfono.');

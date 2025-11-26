@@ -1,13 +1,29 @@
 export class mantenimiento{
     public readonly mantenimientoId: number;
-    public readonly tipoMantenimiento: string;
+    public readonly idEquipamiento: number;
     public readonly fechaMantenimiento: Date;
+    public readonly descripcion: string;
 
-    constructor(tipoMantenimiento: string){
-        this.mantenimientoId = 0;
-        this.tipoMantenimiento = tipoMantenimiento;
-        this.fechaMantenimiento = new Date();
+    constructor(idEquipamiento:number,mantenimientoID?: number, fechaMantenimiento?: Date, descripcion?: string){
+        this.mantenimientoId = mantenimientoID || 0;
+        this.idEquipamiento = idEquipamiento;
+        this.fechaMantenimiento = fechaMantenimiento || new Date();
+        this.descripcion = descripcion || '';
+    }
+
+    public getMantenimientoId(): number {
+        return this.mantenimientoId;
+    }
+
+    public getIdEquipamiento(): number {
+        return this.idEquipamiento;
+    }
+
+    public getFechaMantenimiento(): Date {
+        return this.fechaMantenimiento;
+    }
+
+    public getDescripcion(): string {
+        return this.descripcion;
     }
 }
-
-//esto no debe funcionar con la base de datos ya que son diferentes

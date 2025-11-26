@@ -5,8 +5,8 @@ export class MantenimientoApi {
     return ApiBase.get('/mantenimiento');
   }
 
-  static async crearMantenimiento(tipo: string): Promise<{ id: number }> {
-    return ApiBase.post('/mantenimiento', { tipo });
+  static async crearMantenimiento(mantenimientoData: any): Promise<{ id: number }> {
+    return ApiBase.post('/mantenimiento', mantenimientoData);
   }
 
   static async buscarMantenimiento(criterio: string): Promise<any[]> {
@@ -20,5 +20,9 @@ export class MantenimientoApi {
 
   static async eliminarMantenimiento(id: number): Promise<void> {
     await ApiBase.delete(`/mantenimiento/${id}`);
+  }
+
+  static async actualizarMantenimiento(id: number, mantenimientoData: any): Promise<void> {
+    await ApiBase.put(`/mantenimiento/${id}`, mantenimientoData);
   }
 }
