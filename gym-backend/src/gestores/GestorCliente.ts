@@ -1,4 +1,4 @@
-import { cliente } from '../entidades/Clientea';
+import { cliente } from '../entidades/Cliente';
 import { GestorBase } from './GestorBase';
 
 export class GestorCliente extends GestorBase<cliente> {

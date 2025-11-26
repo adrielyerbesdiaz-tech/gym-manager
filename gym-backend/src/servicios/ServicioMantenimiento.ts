@@ -1,4 +1,4 @@
-import { mantenimiento } from '../entidades/Mantenimientoa';
+import { mantenimiento } from '../entidades/Mantenimiento';
 import { GestorMantenimiento } from '../gestores/GestorMantenimiento';
 
 export class ServicioMantenimiento {

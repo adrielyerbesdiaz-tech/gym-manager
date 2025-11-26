@@ -1,4 +1,4 @@
-import { mantenimiento } from '../entidades/Mantenimientoa';
+import { mantenimiento } from '../entidades/Mantenimiento';
 import { GestorBase } from './GestorBase';
 
 export class GestorMantenimiento extends GestorBase<mantenimiento> {

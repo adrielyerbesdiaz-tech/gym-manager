@@ -1,4 +1,4 @@
-import { equipamientoAccessorio } from '../entidades/EquipamientoaAccesorio';
+import { equipamientoAccessorio } from '../entidades/EquipamientoAccesorio';
 import { GestorBase } from './GestorBase';
 
 export class GestorEquipamientoAccesorio extends GestorBase<equipamientoAccessorio> {

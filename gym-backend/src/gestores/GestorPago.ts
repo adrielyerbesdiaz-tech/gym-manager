@@ -1,4 +1,4 @@
-import { pago } from '../entidades/Pagoa';
+import { pago } from '../entidades/Pago';
 import { GestorBase } from './GestorBase';
 
 export class GestorPago extends GestorBase<pago> {

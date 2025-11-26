@@ -1,4 +1,4 @@
-import { asistencia } from '../entidades/Asistenciaa';
+import { asistencia } from '../entidades/Asistencia';
 import { GestorAsistencia } from '../gestores/GestorAsistencia';
 import { GestorCliente } from '../gestores/GestorCliente';
 

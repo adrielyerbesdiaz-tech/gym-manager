@@ -1,4 +1,4 @@
-import { usuario } from '../entidades/Usuarioa';
+import { usuario } from '../entidades/Usuario';
 import { GestorUsuario } from '../gestores/GestorUsuario';
 
 export class ServicioUsuario {
